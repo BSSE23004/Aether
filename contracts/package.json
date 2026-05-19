@@ -1,0 +1,13 @@
+{
+  "name": "aether-contracts",
+  "version": "0.1.0",
+  "description": "Aether smart contracts - Foundry + Solidity",
+  "private": true,
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "deploy:base-sepolia": "forge script DeployAll --rpc-url $BASE_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify",
+    "gas-report": "forge test --gas-report",
+    "clean": "forge clean"
+  }
+}

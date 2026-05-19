@@ -1,0 +1,39 @@
+{
+  "name": "aether",
+  "version": "0.1.0",
+  "description": "Production-style Web3 collaboration platform",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "docker:build": "docker-compose -f infrastructure/docker/docker-compose.dev.yml build",
+    "docker:up": "docker-compose -f infrastructure/docker/docker-compose.dev.yml up -d",
+    "docker:down": "docker-compose -f infrastructure/docker/docker-compose.dev.yml down",
+    "docker:logs": "docker-compose -f infrastructure/docker/docker-compose.dev.yml logs -f",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "clean:all": "pnpm clean && rm -rf pnpm-lock.yaml",
+    "setup": "pnpm install && pnpm run type-check",
+    "db:migrate": "turbo run db:migrate",
+    "db:seed": "turbo run db:seed"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "turbo": "^1.13.3",
+    "typescript": "^5.3.3"
+  }
+}
