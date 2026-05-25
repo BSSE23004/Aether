@@ -1,0 +1,73 @@
+# =============================================================================
+# Multi-stage Dockerfile for Aether Blockchain Indexer
+# =============================================================================
+# Build stage: Compiles TypeScript event listener
+# Runtime stage: Runs as background service monitoring blockchain events
+#
+# Usage:
+#   docker build -f infrastructure/docker/Dockerfile.indexer -t aether-indexer:latest .
+#   docker run --network aether-network \
+#     -e DATABASE_URL=postgresql://aether:aether123@postgres:5432/aether_dev \
+#     -e REDIS_URL=redis://redis:6379 \
+#     -e BASE_SEPOLIA_RPC_URL=https://sepolia.base.org \
+#     aether-indexer:latest
+#
+# =============================================================================
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM node:20-alpine AS builder
+
+LABEL stage=builder
+WORKDIR /build
+
+# Install pnpm
+RUN npm install -g pnpm@9
+
+# Copy workspace files
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages ./packages
+COPY apps/indexer ./apps/indexer
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build indexer and dependencies
+RUN pnpm run build --filter @aether/indexer
+
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM node:20-alpine
+
+LABEL maintainer="Aether Team"
+LABEL service="indexer"
+
+WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init curl
+
+# Install pnpm
+RUN npm install -g pnpm@9
+
+# Copy built indexer from builder
+COPY --from=builder /build/apps/indexer/dist ./dist
+COPY --from=builder /build/apps/indexer/package.json ./package.json
+COPY --from=builder /build/apps/indexer/node_modules ./node_modules
+
+# Non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S indexer -u 1001
+USER indexer
+
+# Health check: Verify process is running
+# (Indexer doesn't expose HTTP, just check process exists)
+HEALTHCHECK --interval=60s --timeout=15s --start-period=30s --retries=3 \
+  CMD pgrep -f "node dist/index.js" > /dev/null || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+# Start indexer
+CMD ["node", "dist/index.js"]

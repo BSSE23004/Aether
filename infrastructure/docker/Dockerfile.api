@@ -1,0 +1,74 @@
+# =============================================================================
+# Multi-stage Dockerfile for Aether NestJS API
+# =============================================================================
+# Build stage: Compiles TypeScript and installs production dependencies
+# Runtime stage: Runs the compiled application with minimal footprint
+#
+# Usage:
+#   docker build -f infrastructure/docker/Dockerfile.api -t aether-api:latest .
+#   docker run -p 3001:3001 --network aether-network \
+#     -e DATABASE_URL=postgresql://aether:aether123@postgres:5432/aether_dev \
+#     -e REDIS_URL=redis://redis:6379 \
+#     aether-api:latest
+#
+# =============================================================================
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM node:20-alpine AS builder
+
+LABEL stage=builder
+WORKDIR /build
+
+# Install pnpm
+RUN npm install -g pnpm@9
+
+# Copy workspace files
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages ./packages
+COPY apps/api ./apps/api
+
+# Install dependencies (pnpm ci is deterministic and recommended for Docker)
+RUN pnpm install --frozen-lockfile
+
+# Build API and dependencies
+RUN pnpm run build --filter @aether/api
+
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM node:20-alpine
+
+LABEL maintainer="Aether Team"
+LABEL service="api"
+
+WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Install pnpm in runtime image
+RUN npm install -g pnpm@9
+
+# Copy built application from builder
+COPY --from=builder /build/apps/api/dist ./dist
+COPY --from=builder /build/apps/api/package.json ./package.json
+COPY --from=builder /build/apps/api/node_modules ./node_modules
+
+# Non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
+USER nestjs
+
+# Health check: Verify API is responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:3001/health || exit 1
+
+# Expose API port
+EXPOSE 3001
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+# Start application
+CMD ["node", "dist/main.js"]

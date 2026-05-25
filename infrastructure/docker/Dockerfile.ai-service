@@ -1,0 +1,59 @@
+# =============================================================================
+# Dockerfile for Aether FastAPI AI Service
+# =============================================================================
+# Python-based AI inference service with Ollama integration
+#
+# Usage:
+#   docker build -f infrastructure/docker/Dockerfile.ai-service -t aether-ai:latest .
+#   docker run -p 5000:5000 --network aether-network \
+#     -e OLLAMA_HOST=http://ollama:11434 \
+#     -e OLLAMA_MODEL=mistral \
+#     aether-ai:latest
+#
+# =============================================================================
+
+FROM python:3.11-slim
+
+LABEL maintainer="Aether Team"
+LABEL service="ai-service"
+
+WORKDIR /app
+
+# Install system dependencies for building Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1001 aiservice
+
+# Copy requirements from workspace
+COPY apps/ai-service/requirements.txt ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY apps/ai-service/src ./src
+
+# Change ownership to non-root user
+RUN chown -R aiservice:aiservice /app
+
+USER aiservice
+
+# Health check: Verify FastAPI is responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
+
+# Expose port
+EXPOSE 5000
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Start FastAPI application
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]

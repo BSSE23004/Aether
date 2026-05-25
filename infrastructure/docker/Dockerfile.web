@@ -1,0 +1,74 @@
+# =============================================================================
+# Multi-stage Dockerfile for Aether Next.js Frontend
+# =============================================================================
+# Build stage: Compiles TypeScript/React and optimizes for production
+# Runtime stage: Runs Next.js with minimal dependencies
+#
+# Usage:
+#   docker build -f infrastructure/docker/Dockerfile.web -t aether-web:latest .
+#   docker run -p 3000:3000 --network aether-network \
+#     -e NEXT_PUBLIC_API_URL=http://api:3001 \
+#     aether-web:latest
+#
+# =============================================================================
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM node:20-alpine AS builder
+
+LABEL stage=builder
+WORKDIR /build
+
+# Install pnpm
+RUN npm install -g pnpm@9
+
+# Copy workspace files
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages ./packages
+COPY apps/web ./apps/web
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build Next.js application
+RUN pnpm run build --filter @aether/web
+
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM node:20-alpine
+
+LABEL maintainer="Aether Team"
+LABEL service="web"
+
+WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Install pnpm in runtime image
+RUN npm install -g pnpm@9
+
+# Copy Next.js build output from builder
+COPY --from=builder /build/apps/web/.next ./.next
+COPY --from=builder /build/apps/web/public ./public
+COPY --from=builder /build/apps/web/package.json ./package.json
+COPY --from=builder /build/apps/web/node_modules ./node_modules
+
+# Non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+USER nextjs
+
+# Health check: Verify Next.js is responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:3000 || exit 1
+
+# Expose port
+EXPOSE 3000
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+# Start Next.js in production mode
+CMD ["npm", "start"]

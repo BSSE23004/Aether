@@ -1,68 +1,182 @@
 version: '3.9'
 
+################################################################################
+# Aether Development Docker Stack
+################################################################################
+# This stack provides all required services for local development:
+# - PostgreSQL 16: Primary OLTP database
+# - Redis 7: Caching & real-time pub/sub
+# - Ollama: Local AI model inference (optional but included)
+#
+# Quick Start:
+#   docker-compose -f infrastructure/docker/docker-compose.dev.yml up -d
+#   docker-compose -f infrastructure/docker/docker-compose.dev.yml ps
+#   docker-compose -f infrastructure/docker/docker-compose.dev.yml logs -f
+#
+# Teardown:
+#   docker-compose -f infrastructure/docker/docker-compose.dev.yml down
+#   docker-compose -f infrastructure/docker/docker-compose.dev.yml down -v  # with data cleanup
+#
+################################################################################
+
 services:
-  # PostgreSQL - Primary data store
+  # ============================================================================
+  # PostgreSQL 16 - Primary Data Store (ACID Compliance)
+  # ============================================================================
+  # Role: Source of truth for all user state, messages, profiles, metadata
+  # Port: 5432 (accessible on localhost:5432)
+  # Data: Persisted in named volume 'postgres_data'
+  # Health: Monitored via pg_isready command
+  #
   postgres:
     image: postgres:16-alpine
     container_name: aether-postgres
+    labels:
+      service: 'database'
+      environment: 'development'
     environment:
+      # Database credentials (development only - change in production)
       POSTGRES_USER: aether
       POSTGRES_PASSWORD: aether123
       POSTGRES_DB: aether_dev
+      # Connection timeout settings
+      POSTGRES_INITDB_ARGS: '-c shared_buffers=256MB -c effective_cache_size=512MB'
     ports:
       - '5432:5432'
     volumes:
+      # Data persistence across container restarts
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U aether']
+      # Test connection every 10s with 5s timeout
+      test: ['CMD-SHELL', 'pg_isready -U aether -h localhost -p 5432']
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - aether-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    restart: unless-stopped
 
-  # Redis - Cache & Pub/Sub
+  # ============================================================================
+  # Redis 7 - Cache & Real-time Pub/Sub
+  # ============================================================================
+  # Role: Caching layer, real-time message pub/sub, session store
+  # Port: 6379 (accessible on localhost:6379)
+  # Data: In-memory with RDB snapshots
+  # Health: Monitored via redis-cli ping
+  #
   redis:
     image: redis:7-alpine
     container_name: aether-redis
+    labels:
+      service: 'cache'
+      environment: 'development'
+    # Redis command for development (no persistence overhead)
+    command: redis-server --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - '6379:6379'
     volumes:
+      # Temporary RDB snapshots (cleared on container restart)
       - redis_data:/data
     healthcheck:
+      # Verify Redis responds to PING
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - aether-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    restart: unless-stopped
 
-  # Ollama - Local AI models
+  # ============================================================================
+  # Ollama - Local AI Model Inference (Optional)
+  # ============================================================================
+  # Role: Run large language models locally without paid APIs
+  # Port: 11434 (accessible on localhost:11434)
+  # Models: Downloaded on first run (can be pre-pulled)
+  # Health: Monitored via HTTP API health check
+  #
+  # To use: First pull a model:
+  #   docker exec aether-ollama ollama pull mistral
+  #   docker exec aether-ollama ollama pull neural-chat
+  #
   ollama:
     image: ollama/ollama:latest
     container_name: aether-ollama
+    labels:
+      service: 'ai'
+      environment: 'development'
     ports:
       - '11434:11434'
     volumes:
+      # Model cache (can be large, ~10GB depending on models)
       - ollama_data:/root/.ollama
     environment:
-      - OLLAMA_MODELS=/root/.ollama/models
+      # Models directory
+      OLLAMA_MODELS: /root/.ollama/models
     healthcheck:
+      # Check Ollama API is responsive
       test: ['CMD', 'curl', '-f', 'http://localhost:11434/api/tags']
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
     networks:
       - aether-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    restart: unless-stopped
 
+################################################################################
+# Named Volumes (Data Persistence)
+################################################################################
 volumes:
+  # PostgreSQL data (databases, indexes, WAL logs)
   postgres_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/postgres
+
+  # Redis data (RDB snapshots, temporary cache)
   redis_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/redis
+
+  # Ollama models (downloaded LLMs - can be several GB)
   ollama_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/ollama
 
+################################################################################
+# Networks (Service Communication)
+################################################################################
 networks:
+  # Bridge network for inter-service communication
+  # Services communicate using service names (e.g., postgres:5432, redis:6379)
   aether-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

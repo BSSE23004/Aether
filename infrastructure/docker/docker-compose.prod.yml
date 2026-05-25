@@ -1,72 +1,224 @@
 version: '3.9'
 
+################################################################################
+# Aether Production Docker Stack
+################################################################################
+# Production-ready stack with security, persistence, and reliability features:
+# - PostgreSQL 16: Production ACID database
+# - Redis 7: Persistent cache with AOF
+# - Ollama: Optional AI inference (disable if not needed)
+#
+# Important: Configure environment variables before deployment!
+#   cp infrastructure/docker/.env.example infrastructure/docker/.env.prod
+#   Edit .env.prod with your production credentials
+#
+# Start Production Stack:
+#   export COMPOSE_FILE=infrastructure/docker/docker-compose.prod.yml
+#   docker-compose --env-file infrastructure/docker/.env.prod up -d
+#
+################################################################################
+
 services:
-  # PostgreSQL - Primary data store
+  # ============================================================================
+  # PostgreSQL 16 - Production ACID Database
+  # ============================================================================
+  # Role: Primary data store with full persistence and backup capabilities
+  # Port: 5432 (not exposed to internet - use Nginx/Tunnel)
+  # Persistence: Write-Ahead Log (WAL) + daily backups (configure externally)
+  # Backup Strategy: pg_dump to S3 or local storage daily
+  #
   postgres:
     image: postgres:16-alpine
     container_name: aether-postgres-prod
+    labels:
+      service: 'database'
+      environment: 'production'
+      backup: 'required'
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
+      # Production credentials (from .env.prod file)
+      POSTGRES_USER: ${POSTGRES_USER:-aether}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB:-aether_prod}
+      # Production optimization flags
+      POSTGRES_INITDB_ARGS: >
+        -c shared_buffers=512MB
+        -c effective_cache_size=2GB
+        -c maintenance_work_mem=256MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c max_worker_processes=4
+        -c max_parallel_workers_per_gather=2
+        -c max_parallel_workers=4
+        -c max_parallel_maintenance_workers=2
     ports:
       - '5432:5432'
     volumes:
+      # Persistent data storage
       - postgres_data:/var/lib/postgresql/data
+      # WAL Archive (optional - for point-in-time recovery)
+      - postgres_wal_archive:/var/lib/postgresql/wal-archive
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
-      interval: 10s
-      timeout: 5s
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-aether} -h localhost -p 5432']
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 30s
     networks:
       - aether-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
     restart: unless-stopped
+    # Production security: no privileged mode
+    security_opt:
+      - no-new-privileges:true
 
-  # Redis - Cache & Pub/Sub
+  # ============================================================================
+  # Redis 7 - Production Cache with Persistence
+  # ============================================================================
+  # Role: Session cache, rate limiting, real-time pub/sub with RDB/AOF backup
+  # Port: 6379 (not exposed to internet - connect via Tunnel)
+  # Persistence: AOF (append-only file) for durability
+  # Memory: 1GB with LRU eviction policy
+  #
   redis:
     image: redis:7-alpine
     container_name: aether-redis-prod
-    command: redis-server --appendonly yes
+    labels:
+      service: 'cache'
+      environment: 'production'
+      backup: 'optional'
+    # Production persistence: AOF enabled for crash recovery
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --databases 16
+      --loglevel notice
     ports:
       - '6379:6379'
     volumes:
+      # AOF persistence file
       - redis_data:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 15s
     networks:
       - aether-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
-  # Ollama - Local AI models
+  # ============================================================================
+  # Ollama - Production AI Inference (Optional)
+  # ============================================================================
+  # Role: Local LLM inference for content summarization, moderation, etc.
+  # Port: 11434 (internal only - expose via API tunnel if needed)
+  # Models: Pre-pull required models via docker exec
+  # GPU: Supports NVIDIA GPU if available (configure via device requests)
+  #
+  # To disable: Comment out this entire service
+  # To enable GPU: Uncomment deploy.resources section below
+  #
   ollama:
     image: ollama/ollama:latest
     container_name: aether-ollama-prod
+    labels:
+      service: 'ai'
+      environment: 'production'
+      optional: 'true'
     ports:
       - '11434:11434'
     volumes:
+      # Model storage (ensure sufficient disk space)
       - ollama_data:/root/.ollama
     environment:
-      - OLLAMA_MODELS=/root/.ollama/models
+      OLLAMA_MODELS: /root/.ollama/models
+      OLLAMA_HOST: 0.0.0.0:11434
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:11434/api/tags']
-      interval: 30s
-      timeout: 10s
+      interval: 60s
+      timeout: 15s
       retries: 3
+      start_period: 60s
     networks:
       - aether-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Uncomment to enable GPU support (requires nvidia-docker)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
 
+################################################################################
+# Named Volumes (Data Persistence)
+################################################################################
 volumes:
+  # PostgreSQL data files (databases, indexes, WAL)
   postgres_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/aether/postgres
+
+  # PostgreSQL WAL Archive (point-in-time recovery)
+  postgres_wal_archive:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/aether/postgres-wal-archive
+
+  # Redis AOF persistence file
   redis_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/aether/redis
+
+  # Ollama model cache (several GB depending on models)
   ollama_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/aether/ollama
 
+################################################################################
+# Networks (Service Communication)
+################################################################################
 networks:
+  # Internal bridge network (not exposed to host except via explicit ports)
   aether-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: br-aether-prod

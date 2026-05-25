@@ -1,0 +1,70 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist
+build
+.next
+out
+coverage
+
+# Development
+.env
+.env.local
+.env.*.local
+.turbo
+.turborc
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode-test
+*.code-workspace
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# Tests
+test
+tests
+__tests__
+.jest
+.mocha
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.dev.yml
+docker-compose.prod.yml
+.dockerignore
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Temporary
+tmp
+temp
+*.tmp
