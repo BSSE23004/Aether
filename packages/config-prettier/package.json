@@ -1,0 +1,13 @@
+{
+  "name": "@aether/config-prettier",
+  "version": "0.1.0",
+  "description": "Shared Prettier configurations",
+  "private": true,
+  "files": ["prettier.config.js", ".prettierignore"],
+  "exports": {
+    ".": "./prettier.config.js"
+  },
+  "dependencies": {
+    "prettier": "^3.2.5"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@aether/config-eslint",
+  "version": "0.1.0",
+  "description": "Shared ESLint configurations",
+  "private": true,
+  "exports": {
+    ".": "./eslint.config.js"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@aether/config-ts",
+  "version": "0.1.0",
+  "description": "Shared TypeScript configurations",
+  "private": true,
+  "files": ["tsconfig.base.json", "tsconfig.next.json", "tsconfig.node.json"],
+  "exports": {
+    "./base": "./tsconfig.base.json",
+    "./next": "./tsconfig.next.json",
+    "./node": "./tsconfig.node.json"
+  }
+}

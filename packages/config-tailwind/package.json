@@ -1,0 +1,16 @@
+{
+  "name": "@aether/config-tailwind",
+  "version": "0.1.0",
+  "description": "Shared Tailwind CSS configurations",
+  "private": true,
+  "exports": {
+    ".": "./tailwind.config.js"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.1",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "peerDependencies": {
+    "tailwindcss": "^3.0.0"
+  }
+}
