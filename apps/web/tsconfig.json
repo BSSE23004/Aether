@@ -1,9 +1,28 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../packages/config-ts/tsconfig.next.json",
   "compilerOptions": {
-    "outDir": ".next",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"]
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "noEmit": true,
+    "isolatedModules": true
   },
-  "include": ["src", "next-env.d.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

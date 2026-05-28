@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    @apply bg-slate-50 text-slate-900;
+    font-feature-settings: 'rounding' 1;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-aether-primary/20 rounded-full hover:bg-aether-primary/30;
+}
+
+/* Animation classes */
+@keyframes fade-in-up {
+    from {
+        @apply opacity-0 translate-y-2;
+    }
+
+    to {
+        @apply opacity-100 translate-y-0;
+    }
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out;
+}
+
+/* Loading skeleton */
+.skeleton {
+    @apply animate-pulse bg-aether-primary/10 rounded;
+}
