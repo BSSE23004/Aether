@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { WalletConnectButton } from '@/components/wallet';
 
 export function TopNav() {
   return (
@@ -12,8 +12,9 @@ export function TopNav() {
           <span className="hidden sm:inline">Aether</span>
         </Link>
 
+        {/* Wallet Connection Button with RainbowKit */}
         <div className="flex items-center gap-4">
-          <ConnectButton />
+          <WalletConnectButton />
         </div>
       </div>
     </header>

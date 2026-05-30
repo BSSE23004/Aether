@@ -1,33 +1,20 @@
 'use client';
 
-import { useWallet } from '@/hooks/useWallet';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { TopNav } from '@/components/layout/TopNav';
 import { DashboardShell } from '@/components/layout/DashboardShell';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { WalletChainAlert } from '@/components/wallet';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const { isConnected } = useWallet();
-
-  useEffect(() => {
-    if (!isConnected) {
-      router.push('/auth/connect');
-    }
-  }, [isConnected, router]);
-
-  if (!isConnected) {
-    return null;
-  }
-
   return (
-    <>
+    <ProtectedRoute requireCorrectChain={true}>
       <TopNav />
+      <WalletChainAlert />
       <DashboardShell>{children}</DashboardShell>
-    </>
+    </ProtectedRoute>
   );
 }
