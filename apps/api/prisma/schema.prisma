@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Prisma schema for Aether backend
+// Models represent off-chain storage for:
+// - users
+// - communities
+// - channels
+// - messages
+// - files
+// - governance proposals
+
+model User {
+  id             String    @id @default(cuid())
+  walletAddress  String    @unique
+  username       String?   @db.VarChar(32)
+  displayName    String?   @db.VarChar(64)
+  avatarUrl      String?
+  bio            String?   @db.VarChar(512)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  isActive       Boolean   @default(true)
+
+  communities    CommunityMember[]
+  channels       ChannelMember[]
+  messages       Message[]
+  notifications  Notification[]
+  files          FileMetadata[]
+  proposals      Proposal[]      @relation("ProposalCreator")
+  votes          Vote[]
+}
+
+model Community {
+  id             String                 @id @default(cuid())
+  slug           String                 @unique
+  name           String                 @db.VarChar(128)
+  description    String?                @db.VarChar(1024)
+  logoUrl        String?
+  bannerUrl      String?
+  tokenGated     Boolean                @default(false)
+  tokenAddress   String?                @db.VarChar(66)
+  tokenSymbol    String?                @db.VarChar(16)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  members        CommunityMember[]
+  channels       Channel[]
+  proposals      Proposal[]
+  files          FileMetadata[]
+}
+
+model CommunityMember {
+  id           String    @id @default(cuid())
+  community    Community @relation(fields: [communityId], references: [id])
+  communityId  String
+  user         User      @relation(fields: [userId], references: [id])
+  userId       String
+  role         MemberRole @default(MEMBER)
+  joinedAt     DateTime  @default(now())
+
+  @@unique([communityId, userId])
+}
+
+model Channel {
+  id           String    @id @default(cuid())
+  community    Community @relation(fields: [communityId], references: [id])
+  communityId  String
+  name         String    @db.VarChar(128)
+  description  String?   @db.VarChar(512)
+  isPublic     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  members      ChannelMember[]
+  messages     Message[]
+}
+
+model ChannelMember {
+  id         String   @id @default(cuid())
+  channel    Channel  @relation(fields: [channelId], references: [id])
+  channelId  String
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  joinedAt   DateTime @default(now())
+
+  @@unique([channelId, userId])
+}
+
+model Message {
+  id           String     @id @default(cuid())
+  channel      Channel    @relation(fields: [channelId], references: [id])
+  channelId    String
+  author       User       @relation(fields: [authorId], references: [id])
+  authorId     String
+  content      String     @db.Text
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model FileMetadata {
+  id          String   @id @default(cuid())
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+  uploaderId  String
+  community   Community? @relation(fields: [communityId], references: [id])
+  communityId String?
+  ipfsHash    String   @db.VarChar(128)
+  fileName    String   @db.VarChar(256)
+  mimeType    String   @db.VarChar(128)
+  size        Int
+  url         String   @db.VarChar(512)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  type        NotificationType
+  title       String   @db.VarChar(128)
+  body        String   @db.VarChar(512)
+  data        Json?
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Proposal {
+  id           String     @id @default(cuid())
+  community    Community  @relation(fields: [communityId], references: [id])
+  communityId  String
+  creator      User       @relation("ProposalCreator", fields: [creatorId], references: [id])
+  creatorId    String
+  title        String     @db.VarChar(256)
+  description  String     @db.Text
+  metadata     Json?
+  status       ProposalStatus @default(PENDING)
+  votesFor     Int        @default(0)
+  votesAgainst Int        @default(0)
+  startAt      DateTime   @default(now())
+  endAt        DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  votes        Vote[]
+}
+
+model Vote {
+  id          String   @id @default(cuid())
+  proposal    Proposal @relation(fields: [proposalId], references: [id])
+  proposalId  String
+  voter       User     @relation(fields: [voterId], references: [id])
+  voterId     String
+  choice      VoteChoice
+  createdAt   DateTime @default(now())
+
+  @@unique([proposalId, voterId])
+}
+
+enum MemberRole {
+  MEMBER
+  MODERATOR
+  ADMIN
+}
+
+enum NotificationType {
+  MESSAGE
+  PROPOSAL
+  COMMUNITY_INVITE
+  SYSTEM
+}
+
+enum ProposalStatus {
+  PENDING
+  ACTIVE
+  PASSED
+  FAILED
+}
+
+enum VoteChoice {
+  FOR
+  AGAINST
+}
