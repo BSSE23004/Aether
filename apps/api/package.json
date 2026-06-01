@@ -12,7 +12,9 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "type-check": "tsc --noEmit",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "node dist/prisma/seed.js",
+    "db:seed": "node prisma/seed.js",
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "node prisma/seed.cjs",
     "clean": "rm -rf dist"
   },
   "dependencies": {
