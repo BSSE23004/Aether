@@ -58,6 +58,7 @@ export function WalletConnectionProvider({
       return () => clearTimeout(timer);
     }
     setIsReady(true);
+    return undefined;
   }, []);
 
   // Handle connection

@@ -23,8 +23,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUser = async () => {
     if (!address) return null;
     try {
-      const response = await apiClient.get(`${endpoints.users.profile(address)}`);
-      return response;
+      const response = await apiClient.get<{ user: User }>(endpoints.auth.me);
+      return response.user;
     } catch (error) {
       console.error('Failed to fetch user:', error);
       return null;
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     address,
     isLoading,
     error: error as Error | null,
-    refetch: execute,
+    refetch: async () => { await execute(); },
   };
 
   return (

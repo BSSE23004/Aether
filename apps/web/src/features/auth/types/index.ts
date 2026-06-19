@@ -2,10 +2,19 @@
  * Auth feature types
  */
 
+export interface NonceRequest {
+  address: string;
+}
+
+export interface NonceResponse {
+  nonce: string;
+  address: string;
+  expiresAt: string;
+}
+
 export interface LoginRequest {
   address: string;
   signature: string;
-  message: string;
 }
 
 export interface LoginResponse {
@@ -15,7 +24,8 @@ export interface LoginResponse {
     username?: string;
     avatar?: string;
   };
-  token: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface SignupRequest {
@@ -23,3 +33,4 @@ export interface SignupRequest {
   username: string;
   signature: string;
 }
+

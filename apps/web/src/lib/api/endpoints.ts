@@ -5,6 +5,10 @@
 export const endpoints = {
   // Auth
   auth: {
+    nonce: '/api/auth/nonce',
+    login: '/api/auth/login',
+    verify: '/api/auth/verify',
+    logout: '/api/auth/logout',
     me: '/api/auth/me',
     profile: '/api/auth/profile',
   },

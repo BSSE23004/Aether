@@ -35,22 +35,39 @@ class ApiClient {
       });
     }
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...config?.headers,
+    };
+
+    // Automatically attach access token if available
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(new RegExp(`(^| )aether_token=([^;]+)`));
+      const token = match ? match[2] : null;
+      if (token && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
     try {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config?.timeout || this.timeout);
+      
       const response = await fetch(url.toString(), {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...config?.headers,
-        },
+        headers,
         body: body ? JSON.stringify(body) : undefined,
-        timeout: config?.timeout || this.timeout,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new AetherError(
-          'API_ERROR',
-          errorData.message || `API error: ${response.statusCode}`,
+          errorData.code || 'API_ERROR',
+          errorData.message || `API error: ${response.status}`,
           response.status,
           errorData
         );

@@ -11,7 +11,7 @@ import { useNetwork } from '@/hooks/wallet';
 
 export function WalletStatus() {
   const { address, isConnected, chainId } = useAccount();
-  const { data: balance } = useBalance({ address, enabled: isConnected });
+  const { data: balance } = useBalance({ address, query: { enabled: isConnected } });
   const { isCorrectChain, requiredChainId } = useNetwork();
 
   if (!isConnected) {

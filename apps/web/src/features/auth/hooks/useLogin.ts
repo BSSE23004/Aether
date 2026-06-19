@@ -1,5 +1,5 @@
 /**
- * useLogin - login hook
+ * useLogin - SIWE login hook
  */
 
 'use client';
@@ -9,11 +9,11 @@ import { useSignMessage } from 'wagmi';
 import { useAsync } from '@/hooks';
 import { apiClient, endpoints } from '@/lib/api';
 import { useAuthStore } from '../stores/authStore';
-import type { LoginResponse } from '../types';
+import type { LoginResponse, NonceRequest, NonceResponse } from '../types';
 
 export function useLogin() {
   const { signMessageAsync } = useSignMessage();
-  const { setUser, setToken } = useAuthStore();
+  const { setUser, setTokens } = useAuthStore();
 
   const login = useCallback(
     async (address: string) => {
@@ -21,23 +21,32 @@ export function useLogin() {
         throw new Error('Message signing not available');
       }
 
-      // Sign message for authentication
-      const message = `Sign this message to authenticate with Aether: ${address}`;
+      // 1. Fetch Nonce
+      const nonceRes = await apiClient.post<NonceResponse>(
+        endpoints.auth.nonce,
+        { address } as NonceRequest
+      );
+
+      // 2. Format SIWE challenge message matching the backend
+      const message = `Aether SIWE challenge\nNonce: ${nonceRes.nonce}\nAddress: ${address.toLowerCase()}`;
+
+      // 3. Sign message
       const signature = await signMessageAsync({ message });
 
-      // Send to backend
+      // 4. Send to backend
       const response = await apiClient.post<LoginResponse>(
-        endpoints.auth.me,
-        { address, signature, message }
+        endpoints.auth.login,
+        { address: address.toLowerCase(), signature }
       );
 
       if (response) {
         setUser(response.user as any);
-        setToken(response.token);
+        setTokens(response.accessToken, response.refreshToken);
         return response;
       }
+      return undefined;
     },
-    [signMessageAsync, setUser, setToken]
+    [signMessageAsync, setUser, setTokens]
   );
 
   const { data, error, isLoading, execute } = useAsync(

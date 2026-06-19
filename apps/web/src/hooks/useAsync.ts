@@ -22,7 +22,7 @@ export function useAsync<T, E = Error>(
     isLoading: immediate,
   });
 
-  const executeRef = useRef<() => Promise<void>>();
+  const executeRef = useRef<() => Promise<T>>();
 
   const execute = useCallback(async () => {
     setState({ data: null, error: null, isLoading: true });

@@ -6,7 +6,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, endpoints } from '@/lib/api';
-import type { Message, SendMessageRequest, SendMessageResponse } from '@/lib/api';
+import type { Message } from '@/types';
+import type { SendMessageRequest, SendMessageResponse } from '@/lib/api';
 
 export function useSendMessage(communityId: string) {
   const queryClient = useQueryClient();
