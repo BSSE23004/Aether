@@ -4,8 +4,8 @@ import { CommunitiesService } from './communities.service';
 import { RolesGuard } from './roles.guard';
 
 @Module({
-	controllers: [CommunitiesController],
-	providers: [CommunitiesService, RolesGuard],
-	exports: [CommunitiesService],
+  controllers: [CommunitiesController],
+  providers: [CommunitiesService, RolesGuard],
+  exports: [CommunitiesService],
 })
 export class CommunitiesModule {}
