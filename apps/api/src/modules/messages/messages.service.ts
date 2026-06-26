@@ -60,4 +60,50 @@ export class MessagesService {
       }
     });
   }
+
+  async update(messageId: string, authorId: string, content: string, metadata?: any) {
+    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    if (!message || message.deletedAt !== null) {
+      throw new Error('Message not found');
+    }
+    if (message.authorId !== authorId) {
+      throw new Error('Unauthorized to edit this message');
+    }
+
+    return this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        content,
+        metadata: metadata ? metadata : undefined,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            wallets: {
+              where: { isPrimary: true },
+              select: { address: true }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  async delete(messageId: string, authorId: string) {
+    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    if (!message || message.deletedAt !== null) {
+      throw new Error('Message not found');
+    }
+    if (message.authorId !== authorId) {
+      throw new Error('Unauthorized to delete this message');
+    }
+
+    return this.prisma.message.update({
+      where: { id: messageId },
+      data: { deletedAt: new Date() },
+    });
+  }
 }

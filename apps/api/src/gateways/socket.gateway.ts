@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -11,6 +11,9 @@ import {
 import { Server, Socket } from 'socket.io';
 import { verifyJwt } from '../modules/auth/auth.jwt';
 import { MessagesService } from '../modules/messages/messages.service';
+import { WsAuthGuard } from '../common/guards/ws-auth.guard';
+import { CreateMessageDto } from '../modules/messages/dto/create-message.dto';
+import { UpdateMessageDto } from '../modules/messages/dto/update-message.dto';
 
 @WebSocketGateway({
   namespace: '/ws',
@@ -48,11 +51,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('join_channel')
   handleJoinChannel(@ConnectedSocket() client: Socket, @MessageBody() data: { channelId: string }) {
     if (!data?.channelId) return;
-    
-    // In a real app, verify user has access to channelId here
     client.join(`channel_${data.channelId}`);
     this.logger.debug(`User ${client.data.user.id} joined channel_${data.channelId}`);
   }
@@ -64,8 +66,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.debug(`User ${client.data.user.id} left channel_${data.channelId}`);
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('send_message')
-  async handleSendMessage(@ConnectedSocket() client: Socket, @MessageBody() data: { channelId: string; content: string; metadata?: any }) {
+  async handleSendMessage(@ConnectedSocket() client: Socket, @MessageBody() data: CreateMessageDto) {
     try {
       // 1. Save to database
       const message = await this.messagesService.create({
@@ -78,7 +81,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 2. Broadcast to room
       this.server.to(`channel_${data.channelId}`).emit('new_message', message);
       
-      // Optional: return acknowledgment to sender
       return { status: 'success', data: message };
     } catch (error) {
       this.logger.error('Failed to send message', error);
@@ -86,6 +88,46 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('edit_message')
+  async handleEditMessage(@ConnectedSocket() client: Socket, @MessageBody() data: { channelId: string; messageId: string } & UpdateMessageDto) {
+    try {
+      const updatedMessage = await this.messagesService.update(
+        data.messageId,
+        client.data.user.id,
+        data.content,
+        data.metadata
+      );
+
+      this.server.to(`channel_${data.channelId}`).emit('message_edited', updatedMessage);
+      
+      return { status: 'success', data: updatedMessage };
+    } catch (error) {
+      this.logger.error('Failed to edit message', error);
+      return { status: 'error', error: error.message };
+    }
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('delete_message')
+  async handleDeleteMessage(@ConnectedSocket() client: Socket, @MessageBody() data: { channelId: string; messageId: string }) {
+    try {
+      await this.messagesService.delete(data.messageId, client.data.user.id);
+      
+      this.server.to(`channel_${data.channelId}`).emit('message_deleted', {
+        messageId: data.messageId,
+        channelId: data.channelId,
+        deletedAt: new Date().toISOString()
+      });
+      
+      return { status: 'success', data: { messageId: data.messageId } };
+    } catch (error) {
+      this.logger.error('Failed to delete message', error);
+      return { status: 'error', error: error.message };
+    }
+  }
+
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('typing_start')
   handleTypingStart(@ConnectedSocket() client: Socket, @MessageBody() data: { channelId: string }) {
     client.to(`channel_${data.channelId}`).emit('user_typing', {
@@ -94,6 +136,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('typing_end')
   handleTypingEnd(@ConnectedSocket() client: Socket, @MessageBody() data: { channelId: string }) {
     client.to(`channel_${data.channelId}`).emit('user_stop_typing', {
@@ -102,9 +145,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('read_receipt')
   handleReadReceipt(@ConnectedSocket() client: Socket, @MessageBody() data: { channelId: string; messageId: string }) {
-    // In a full implementation, save read status to DB here
+    // Basic read receipt implementation (broadcasts to active users in room)
     client.to(`channel_${data.channelId}`).emit('message_read', {
       userId: client.data.user.id,
       messageId: data.messageId,
