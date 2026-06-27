@@ -1,6 +1,7 @@
 'use client';
 
 import { useCommunities } from '@/hooks/useCommunities';
+import Link from 'next/link';
 
 export default function CommunitiesPage() {
   const { communities, isLoading } = useCommunities();
@@ -31,9 +32,10 @@ export default function CommunitiesPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {communities.map((community) => (
-              <div
+              <Link
                 key={community.id}
-                className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
+                href={`/communities/${community.id}`}
+                className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent block"
               >
                 {community.logo && (
                   <div className="mb-4 h-12 w-12 rounded bg-aether-primary/10" />
@@ -50,7 +52,7 @@ export default function CommunitiesPage() {
                     Join
                   </button>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

@@ -29,16 +29,26 @@ export const endpoints = {
     leave: (id: string) => `/api/communities/${id}/leave`,
     members: (id: string) => `/api/communities/${id}/members`,
     create: '/api/communities',
+    channels: (id: string) => `/api/communities/${id}/channels`,
+  },
+
+  // Channels
+  channels: {
+    list: (communityId: string) => `/api/communities/${communityId}/channels`,
+    detail: (id: string) => `/api/channels/${id}`,
+    create: (communityId: string) => `/api/communities/${communityId}/channels`,
+    update: (id: string) => `/api/channels/${id}`,
+    delete: (id: string) => `/api/channels/${id}`,
   },
 
   // Messages
   messages: {
-    list: (communityId: string) => `/api/communities/${communityId}/messages`,
-    send: (communityId: string) => `/api/communities/${communityId}/messages`,
-    detail: (communityId: string, messageId: string) => 
-      `/api/communities/${communityId}/messages/${messageId}`,
-    delete: (communityId: string, messageId: string) =>
-      `/api/communities/${communityId}/messages/${messageId}`,
+    list: (channelId: string) => `/api/channels/${channelId}/messages`,
+    send: (channelId: string) => `/api/channels/${channelId}/messages`,
+    detail: (channelId: string, messageId: string) => 
+      `/api/channels/${channelId}/messages/${messageId}`,
+    delete: (channelId: string, messageId: string) =>
+      `/api/channels/${channelId}/messages/${messageId}`,
   },
 
   // Proposals

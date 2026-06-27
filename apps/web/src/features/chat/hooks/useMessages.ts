@@ -1,5 +1,5 @@
 /**
- * useMessages - fetch messages for a community
+ * useMessages - fetch messages for a channel
  */
 
 'use client';
@@ -9,17 +9,17 @@ import { apiClient, endpoints } from '@/lib/api';
 import { CACHE_TIMES } from '@/config';
 import type { Message, PaginatedResponse } from '@/types';
 
-export function useMessages(communityId: string | null, enabled = true) {
+export function useMessages(channelId: string | null, enabled = true) {
   return useQuery({
-    queryKey: ['messages', communityId],
+    queryKey: ['messages', channelId],
     queryFn: async () => {
-      if (!communityId) return null;
+      if (!channelId) return null;
       const response = await apiClient.get<PaginatedResponse<Message>>(
-        endpoints.messages.list(communityId)
+        endpoints.messages.list(channelId)
       );
       return response;
     },
-    enabled: !!communityId && enabled,
+    enabled: !!channelId && enabled,
     staleTime: CACHE_TIMES.INSTANT,
     gcTime: CACHE_TIMES.MEDIUM,
   });
