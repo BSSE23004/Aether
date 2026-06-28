@@ -1,0 +1,29 @@
+# Compiler artifacts
+out/
+cache/
+
+# Dependencies
+lib/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+lcov.info/
+.coverage/
+
+# Foundry
+broadcast/
+!/script/.broadcast.keep

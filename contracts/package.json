@@ -6,8 +6,15 @@
   "scripts": {
     "build": "forge build",
     "test": "forge test",
-    "deploy:base-sepolia": "forge script DeployAll --rpc-url $BASE_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify",
-    "gas-report": "forge test --gas-report",
-    "clean": "forge clean"
+    "test:coverage": "forge coverage",
+    "test:gas": "forge test --gas-report",
+    "test:ci": "forge test --ci",
+    "deploy:base-sepolia": "forge script script/DeployAll.s.sol:DeployAll --rpc-url $BASE_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify",
+    "deploy:local": "forge script script/DeployAll.s.sol:DeployAll --rpc-url $LOCALHOST_RPC_URL --private-key $PRIVATE_KEY --broadcast",
+    "verify": "forge verify-contract",
+    "clean": "forge clean",
+    "format": "forge fmt",
+    "format:check": "forge fmt --check",
+    "slither": "slither . --hardhat-ignore-compile"
   }
 }

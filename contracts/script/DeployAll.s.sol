@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "forge-std/Script.sol";
+import "../src/AetherCommunity.sol";
+import "../src/AetherGovernance.sol";
+import "../src/AetherMembership.sol";
+
+/**
+ * @title DeployAll
+ * @notice Deployment script for all Aether contracts
+ * @dev Deploys contracts in the correct order with proper initialization
+ */
+contract DeployAll is Script {
+    // Deployed contract addresses
+    AetherCommunity public communityContract;
+    AetherGovernance public governanceContract;
+    AetherMembership public membershipContract;
+
+    // Deployment parameters
+    string constant COMMUNITY_NAME = "Aether";
+    string constant COMMUNITY_SYMBOL = "AETH";
+    string constant COMMUNITY_DESCRIPTION = "Aether - Student Budget Safe Web3 Collaboration Platform";
+    uint256 constant INITIAL_TREASURY = 0; // No initial treasury funding
+    uint256 constant VOTING_PERIOD = 7 days;
+    uint256 constant QUORUM_PERCENTAGE = 10; // 10% quorum required
+    uint256 constant MEMBERSHIP_PRICE = 0.01 ether; // Low cost for students
+
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy membership contract first (needed for community)
+        membershipContract = new AetherMembership(
+            COMMUNITY_NAME,
+            COMMUNITY_SYMBOL,
+            MEMBERSHIP_PRICE
+        );
+        console.log("AetherMembership deployed at:", address(membershipContract));
+
+        // Deploy governance contract
+        governanceContract = new AetherGovernance(
+            address(membershipContract),
+            VOTING_PERIOD,
+            QUORUM_PERCENTAGE
+        );
+        console.log("AetherGovernance deployed at:", address(governanceContract));
+
+        // Deploy community contract
+        communityContract = new AetherCommunity(
+            address(membershipContract),
+            address(governanceContract),
+            COMMUNITY_NAME,
+            COMMUNITY_DESCRIPTION
+        );
+        console.log("AetherCommunity deployed at:", address(communityContract));
+
+        // Grant governance permissions to community contract
+        governanceContract.grantRole(
+            governanceContract.ADMIN_ROLE(),
+            address(communityContract)
+        );
+
+        // Grant membership minter role to community contract
+        membershipContract.grantRole(
+            membershipContract.MINTER_ROLE(),
+            address(communityContract)
+        );
+
+        vm.stopBroadcast();
+
+        // Log deployment summary
+        console.log("\n=== Deployment Summary ===");
+        console.log("Membership:", address(membershipContract));
+        console.log("Governance:", address(governanceContract));
+        console.log("Community:", address(communityContract));
+    }
+}
