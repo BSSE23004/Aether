@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
+import "../src/CommunityRegistry.sol";
 import "../src/AetherCommunity.sol";
 import "../src/AetherGovernance.sol";
 import "../src/AetherMembership.sol";
@@ -13,6 +14,7 @@ import "../src/AetherMembership.sol";
  */
 contract DeployAll is Script {
     // Deployed contract addresses
+    CommunityRegistry public registryContract;
     AetherCommunity public communityContract;
     AetherGovernance public governanceContract;
     AetherMembership public membershipContract;
@@ -28,9 +30,14 @@ contract DeployAll is Script {
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy membership contract first (needed for community)
+        // Deploy community registry first
+        registryContract = new CommunityRegistry(deployer);
+        console.log("CommunityRegistry deployed at:", address(registryContract));
+
+        // Deploy membership contract
         membershipContract = new AetherMembership(
             COMMUNITY_NAME,
             COMMUNITY_SYMBOL,
@@ -67,12 +74,20 @@ contract DeployAll is Script {
             address(communityContract)
         );
 
+        // Grant creator role to deployer in registry
+        registryContract.grantRole(
+            registryContract.CREATOR_ROLE(),
+            deployer
+        );
+
         vm.stopBroadcast();
 
         // Log deployment summary
         console.log("\n=== Deployment Summary ===");
+        console.log("Registry:", address(registryContract));
         console.log("Membership:", address(membershipContract));
         console.log("Governance:", address(governanceContract));
         console.log("Community:", address(communityContract));
+        console.log("Deployer:", deployer);
     }
 }

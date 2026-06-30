@@ -10,12 +10,15 @@ contracts/
 ├── DEPLOYMENT.md                  # Deployment guide
 ├── STRUCTURE.md                   # This file
 ├── src/                           # Contract source files
-│   ├── AetherCommunity.sol        # Community registry contract
+│   ├── CommunityRegistry.sol      # Advanced community registry with metadata
+│   ├── AetherCommunity.sol        # Legacy community registry contract
 │   ├── AetherGovernance.sol       # DAO governance contract
 │   └── AetherMembership.sol       # ERC721 membership NFT contract
 ├── script/                        # Deployment scripts
-│   └── DeployAll.s.sol           # Main deployment script
+│   ├── DeployAll.s.sol           # Main deployment script for all contracts
+│   └── DeployCommunityRegistry.s.sol # Individual CommunityRegistry deployment
 ├── test/                         # Test files
+│   ├── CommunityRegistry.t.sol   # CommunityRegistry contract tests
 │   ├── AetherCommunity.t.sol     # Community contract tests
 │   ├── AetherGovernance.t.sol    # Governance contract tests
 │   └── AetherMembership.t.sol    # Membership contract tests
@@ -35,6 +38,7 @@ contracts/
 
 ### Source Contracts
 
+- **CommunityRegistry.sol**: Advanced community registry with metadata and admin management
 - **AetherCommunity.sol**: Manages community registry, creation, and updates
 - **AetherGovernance.sol**: Handles DAO proposals, voting, and execution
 - **AetherMembership.sol**: ERC721 membership NFTs for community access
@@ -42,9 +46,11 @@ contracts/
 ### Deployment Scripts
 
 - **DeployAll.s.sol**: Deploys all contracts in the correct order with proper initialization
+- **DeployCommunityRegistry.s.sol**: Deploys only the CommunityRegistry contract
 
 ### Test Files
 
+- **CommunityRegistry.t.sol**: Comprehensive tests for community registry functionality
 - **AetherCommunity.t.sol**: Comprehensive tests for community functionality
 - **AetherGovernance.t.sol**: Tests for governance proposals and voting
 - **AetherMembership.t.sol**: Tests for membership minting and management
@@ -99,6 +105,7 @@ pnpm run test:coverage  # Run with coverage
 ### Deployment
 ```bash
 pnpm run deploy:base-sepolia  # Deploy to Base Sepolia
+pnpm run deploy:registry      # Deploy only CommunityRegistry
 pnpm run deploy:local         # Deploy to local network
 ```
 

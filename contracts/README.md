@@ -6,6 +6,7 @@ Aether smart contracts built with Foundry and Solidity for the student-budget-sa
 
 This repository contains the smart contracts for the Aether platform, including:
 
+- **CommunityRegistry**: Advanced community registry with metadata and admin management
 - **AetherCommunity**: Community registry and management
 - **AetherGovernance**: DAO governance system for proposals and voting
 - **AetherMembership**: ERC721 membership NFTs for community access
@@ -15,6 +16,8 @@ This repository contains the smart contracts for the Aether platform, including:
 ### Contract Hierarchy
 
 ```
+CommunityRegistry
+    ↓
 AetherMembership (ERC721)
     ↓
 AetherGovernance
@@ -24,11 +27,14 @@ AetherCommunity
 
 ### Key Features
 
-- **Community Registry**: On-chain community creation and management
+- **Community Registry**: Advanced community creation with metadata and admin management
 - **DAO Governance**: Proposal creation, voting, and execution
 - **Membership NFTs**: ERC721 tokens for community access
 - **Access Control**: Role-based permissions for security
 - **Reentrancy Protection**: Security best practices
+- **Metadata Support**: IPFS and HTTP metadata URIs
+- **Admin Management**: Multi-admin support for communities
+- **Verification System**: Community verification process
 
 ## 🚀 Getting Started
 
@@ -126,8 +132,11 @@ pnpm run deploy:local
 ### Base Sepolia Deployment
 
 ```bash
-# Deploy to Base Sepolia testnet
+# Deploy all contracts to Base Sepolia testnet
 pnpm run deploy:base-sepolia
+
+# Deploy only CommunityRegistry
+pnpm run deploy:registry
 ```
 
 ### Manual Deployment
@@ -199,6 +208,29 @@ pnpm run test:coverage
 
 ## 📚 Contract Documentation
 
+### CommunityRegistry
+
+Advanced community registry contract with metadata and admin management.
+
+**Key Functions:**
+- `createCommunity(string name, string description, string metadataURI)`: Create new community with metadata
+- `updateCommunity(uint256 communityId, string name, string description, string metadataURI)`: Update community metadata
+- `deactivateCommunity(uint256 communityId)`: Deactivate a community
+- `activateCommunity(uint256 communityId)`: Reactivate a community (admin only)
+- `addCommunityAdmin(uint256 communityId, address admin)`: Add admin to community
+- `removeCommunityAdmin(uint256 communityId, address admin)`: Remove admin from community
+- `requestVerification(uint256 communityId)`: Request community verification
+- `verifyCommunity(uint256 communityId)`: Verify community (platform admin only)
+- `updateCommunityStats(uint256 communityId, uint256 memberCount, uint256 channelCount, uint256 messageCount)`: Update community statistics
+
+**Features:**
+- Metadata URI support (IPFS and HTTP)
+- Multi-admin support per community
+- Community verification system
+- Community statistics tracking
+- Pagination support for community listing
+- Duplicate name prevention
+
 ### AetherMembership
 
 ERC721 membership NFT contract for community access.
@@ -221,13 +253,16 @@ DAO governance contract for proposals and voting.
 
 ### AetherCommunity
 
-Community registry and management contract.
+Legacy community registry contract (being replaced by CommunityRegistry).
 
 **Key Functions:**
 - `createCommunity(string name, string description)`: Create new community
 - `updateCommunity(uint256 communityId, string name, string description)`: Update community
 - `deactivateCommunity(uint256 communityId)`: Deactivate community
 - `getUserCommunities(address user)`: Get user's communities
+- `getCommunity(uint256 communityId)`: Get community details
+
+**Note:** This contract is being phased out in favor of CommunityRegistry.
 
 ## 🔗 Network Configuration
 
