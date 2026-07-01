@@ -11,17 +11,20 @@ contracts/
 ├── STRUCTURE.md                   # This file
 ├── src/                           # Contract source files
 │   ├── CommunityRegistry.sol      # Advanced community registry with metadata
+│   ├── MembershipPass.sol         # Gas-efficient ERC721 membership NFT
 │   ├── AetherCommunity.sol        # Legacy community registry contract
 │   ├── AetherGovernance.sol       # DAO governance contract
-│   └── AetherMembership.sol       # ERC721 membership NFT contract
+│   └── AetherMembership.sol       # Legacy ERC721 membership NFT contract
 ├── script/                        # Deployment scripts
 │   ├── DeployAll.s.sol           # Main deployment script for all contracts
-│   └── DeployCommunityRegistry.s.sol # Individual CommunityRegistry deployment
+│   ├── DeployCommunityRegistry.s.sol # Individual CommunityRegistry deployment
+│   └── DeployMembershipPass.s.sol    # Individual MembershipPass deployment
 ├── test/                         # Test files
 │   ├── CommunityRegistry.t.sol   # CommunityRegistry contract tests
+│   ├── MembershipPass.t.sol      # MembershipPass contract tests
 │   ├── AetherCommunity.t.sol     # Community contract tests
 │   ├── AetherGovernance.t.sol    # Governance contract tests
-│   └── AetherMembership.t.sol    # Membership contract tests
+│   └── AetherMembership.t.sol    # Legacy membership contract tests
 └── lib/                          # Dependencies
     ├── openzeppelin-contracts/   # OpenZeppelin contracts
     └── forge-std/               # Foundry standard library
@@ -39,21 +42,24 @@ contracts/
 ### Source Contracts
 
 - **CommunityRegistry.sol**: Advanced community registry with metadata and admin management
+- **MembershipPass.sol**: Gas-efficient ERC721 membership NFT with burning and expiry
 - **AetherCommunity.sol**: Manages community registry, creation, and updates
 - **AetherGovernance.sol**: Handles DAO proposals, voting, and execution
-- **AetherMembership.sol**: ERC721 membership NFTs for community access
+- **AetherMembership.sol**: Legacy ERC721 membership NFTs for community access
 
 ### Deployment Scripts
 
 - **DeployAll.s.sol**: Deploys all contracts in the correct order with proper initialization
 - **DeployCommunityRegistry.s.sol**: Deploys only the CommunityRegistry contract
+- **DeployMembershipPass.s.sol**: Deploys only the MembershipPass contract
 
 ### Test Files
 
 - **CommunityRegistry.t.sol**: Comprehensive tests for community registry functionality
+- **MembershipPass.t.sol**: Comprehensive tests for membership pass functionality
 - **AetherCommunity.t.sol**: Comprehensive tests for community functionality
 - **AetherGovernance.t.sol**: Tests for governance proposals and voting
-- **AetherMembership.t.sol**: Tests for membership minting and management
+- **AetherMembership.t.sol**: Tests for legacy membership minting and management
 
 ### Dependencies
 
@@ -106,6 +112,7 @@ pnpm run test:coverage  # Run with coverage
 ```bash
 pnpm run deploy:base-sepolia  # Deploy to Base Sepolia
 pnpm run deploy:registry      # Deploy only CommunityRegistry
+pnpm run deploy:membership    # Deploy only MembershipPass
 pnpm run deploy:local         # Deploy to local network
 ```
 

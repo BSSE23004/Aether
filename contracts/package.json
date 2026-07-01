@@ -11,6 +11,7 @@
     "test:ci": "forge test --ci",
     "deploy:base-sepolia": "forge script script/DeployAll.s.sol:DeployAll --rpc-url $BASE_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify",
     "deploy:registry": "forge script script/DeployCommunityRegistry.s.sol:DeployCommunityRegistry --rpc-url $BASE_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify",
+    "deploy:membership": "forge script script/DeployMembershipPass.s.sol:DeployMembershipPass --rpc-url $BASE_SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify",
     "deploy:local": "forge script script/DeployAll.s.sol:DeployAll --rpc-url $LOCALHOST_RPC_URL --private-key $PRIVATE_KEY --broadcast",
     "verify": "forge verify-contract",
     "clean": "forge clean",

@@ -7,9 +7,10 @@ Aether smart contracts built with Foundry and Solidity for the student-budget-sa
 This repository contains the smart contracts for the Aether platform, including:
 
 - **CommunityRegistry**: Advanced community registry with metadata and admin management
+- **MembershipPass**: Gas-efficient ERC721 membership NFT with burning and expiry
 - **AetherCommunity**: Community registry and management
 - **AetherGovernance**: DAO governance system for proposals and voting
-- **AetherMembership**: ERC721 membership NFTs for community access
+- **AetherMembership**: Legacy ERC721 membership NFTs for community access
 
 ## 🏗️ Architecture
 
@@ -18,7 +19,9 @@ This repository contains the smart contracts for the Aether platform, including:
 ```
 CommunityRegistry
     ↓
-AetherMembership (ERC721)
+MembershipPass (ERC721)
+    ↓
+AetherMembership (ERC721) - Legacy
     ↓
 AetherGovernance
     ↓
@@ -28,6 +31,7 @@ AetherCommunity
 ### Key Features
 
 - **Community Registry**: Advanced community creation with metadata and admin management
+- **Membership Pass**: Gas-efficient ERC721 membership with burning and expiry
 - **DAO Governance**: Proposal creation, voting, and execution
 - **Membership NFTs**: ERC721 tokens for community access
 - **Access Control**: Role-based permissions for security
@@ -35,6 +39,7 @@ AetherCommunity
 - **Metadata Support**: IPFS and HTTP metadata URIs
 - **Admin Management**: Multi-admin support for communities
 - **Verification System**: Community verification process
+- **Gas Optimization**: Custom errors and efficient storage patterns
 
 ## 🚀 Getting Started
 
@@ -137,6 +142,9 @@ pnpm run deploy:base-sepolia
 
 # Deploy only CommunityRegistry
 pnpm run deploy:registry
+
+# Deploy only MembershipPass
+pnpm run deploy:membership
 ```
 
 ### Manual Deployment
@@ -231,15 +239,40 @@ Advanced community registry contract with metadata and admin management.
 - Pagination support for community listing
 - Duplicate name prevention
 
+### MembershipPass
+
+Gas-efficient ERC721 membership NFT with burning and expiry support.
+
+**Key Functions:**
+- `mintMembership(address to, string metadataURI, uint256 expiry)`: Mint membership with payment
+- `adminMint(address to, string metadataURI, uint256 expiry)`: Admin mint without payment
+- `burnMembership(uint256 tokenId)`: Burn membership pass
+- `hasValidMembership(address member)`: Check if membership is valid
+- `extendMembership(address member, uint256 newExpiry)`: Extend membership expiry
+- `setMembershipPrice(uint256 newPrice)`: Update membership price
+- `setTreasury(address newTreasury)`: Update treasury address
+- `setMaxSupply(uint256 newMaxSupply)`: Update max supply
+
+**Features:**
+- Gas-efficient storage using uint256 instead of structs
+- Membership expiry system (0 for permanent)
+- Burning functionality with storage cleanup
+- Custom errors for gas efficiency
+- Max supply control
+- Transfer with expiry preservation
+- Comprehensive statistics tracking
+
 ### AetherMembership
 
-ERC721 membership NFT contract for community access.
+Legacy ERC721 membership NFT contract for community access.
 
 **Key Functions:**
 - `mintMembership(address to, string memory metadataURI)`: Mint membership with payment
 - `adminMint(address to, string memory metadataURI)`: Admin mint without payment
 - `setMembershipPrice(uint256 newPrice)`: Update membership price
 - `getUserMemberships(address user)`: Get user's membership tokens
+
+**Note:** This is the legacy membership contract. Use MembershipPass for new deployments.
 
 ### AetherGovernance
 
@@ -333,3 +366,6 @@ For issues and questions:
 - [ ] Implement upgradeable contracts
 - [ ] Add comprehensive audits
 - [ ] Mainnet deployment
+- [ ] Phase out legacy AetherMembership contract
+- [ ] Add membership tier system to MembershipPass
+- [ ] Implement membership transfer restrictions
