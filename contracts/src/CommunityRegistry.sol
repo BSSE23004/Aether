@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title CommunityRegistry
@@ -12,13 +11,12 @@ import "@openzeppelin/contracts/utils/Counters.sol";
  * @dev Handles community creation, metadata storage, and admin management
  */
 contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
-    using Counters for Counters.Counter;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
 
-    Counters.Counter private _communityIdCounter;
+    uint256 private _communityIdCounter;
 
     struct Community {
         uint256 id;
@@ -157,8 +155,8 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
             _validateMetadataURI(_metadataURI);
         }
 
-        _communityIdCounter.increment();
-        uint256 communityId = _communityIdCounter.current();
+        _communityIdCounter++;
+        uint256 communityId = _communityIdCounter;
 
         communities[communityId] = Community({
             id: communityId,

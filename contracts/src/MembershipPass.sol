@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title MembershipPass
@@ -14,13 +13,11 @@ import "@openzeppelin/contracts/utils/Counters.sol";
  * @dev Optimized membership pass with burning, validity checks, and metadata support
  */
 contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, ReentrancyGuard {
-    using Counters for Counters.Counter;
-
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    Counters.Counter private _tokenIdCounter;
+    uint256 private _tokenIdCounter;
 
     uint256 public membershipPrice;
     address public treasury;
@@ -86,7 +83,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
         membershipPrice = _membershipPrice;
         maxSupply = _maxSupply;
         treasury = _initialAdmin;
-        _tokenIdCounter.reset();
+        _tokenIdCounter = 0;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _initialAdmin);
         _grantRole(ADMIN_ROLE, _initialAdmin);
@@ -115,8 +112,8 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
         if (_expiry != 0 && _expiry <= block.timestamp) revert InvalidExpiry();
         if (bytes(_metadataURI).length > 500) revert MetadataTooLong();
 
-        _tokenIdCounter.increment();
-        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter++;
+        uint256 tokenId = _tokenIdCounter;
 
         _safeMint(_to, tokenId);
 
@@ -155,8 +152,8 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
         if (_expiry != 0 && _expiry <= block.timestamp) revert InvalidExpiry();
         if (bytes(_metadataURI).length > 500) revert MetadataTooLong();
 
-        _tokenIdCounter.increment();
-        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter++;
+        uint256 tokenId = _tokenIdCounter;
 
         _safeMint(_to, tokenId);
 
