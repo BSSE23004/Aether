@@ -60,7 +60,7 @@ contract AetherMembership is
     function mintMembership(address _to, string memory _metadataURI)
         external
         payable
-        nonCont
+        nonReentrant
         returns (uint256)
     {
         require(msg.value >= membershipPrice, "Insufficient payment");
@@ -92,7 +92,7 @@ contract AetherMembership is
     function adminMint(address _to, string memory _metadataURI)
         external
         onlyRole(MINTER_ROLE)
-        nonCont
+        nonReentrant
         returns (uint256)
     {
         require(_to != address(0), "Invalid address");
@@ -137,9 +137,10 @@ contract AetherMembership is
     function getMembership(uint256 _tokenId)
         external
         view
-        returns (Membership memory)
+        returns (uint256 tokenId, address member, uint256 joinedAt, string memory metadataURI)
     {
-        return memberships[_tokenId];
+        Membership memory membership = memberships[_tokenId];
+        return (membership.tokenId, membership.member, membership.joinedAt, membership.metadataURI);
     }
 
     function totalSupply() public view override(ERC721Enumerable) returns (uint256) {
@@ -162,6 +163,10 @@ contract AetherMembership is
         returns (uint256)
     {
         return super.tokenByIndex(index);
+    }
+
+    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
+        super._increaseBalance(account, value);
     }
 
     function _update(address to, uint256 tokenId, address auth)

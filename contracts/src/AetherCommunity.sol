@@ -61,7 +61,7 @@ contract AetherCommunity is AccessControl, ReentrancyGuard {
     function createCommunity(
         string memory _name,
         string memory _description
-    ) external nonCont returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         totalCommunities++;
         uint256 communityId = totalCommunities;
 
@@ -100,8 +100,13 @@ contract AetherCommunity is AccessControl, ReentrancyGuard {
         return userCommunities[_user];
     }
 
-    function getCommunity(uint256 _communityId) external view returns (Community memory) {
-        return communities[_communityId];
+    function getCommunity(uint256 _communityId)
+        external
+        view
+        returns (string memory name, string memory description, address creator, uint256 createdAt, bool isActive)
+    {
+        Community memory community = communities[_communityId];
+        return (community.name, community.description, community.creator, community.createdAt, community.isActive);
     }
 
     function supportsInterface(bytes4 interfaceId)

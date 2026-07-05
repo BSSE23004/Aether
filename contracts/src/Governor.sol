@@ -1,39 +1,55 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/governance/Governor.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/**
- * @title Governor
- * @notice OpenZeppelin-based Governor contract for Aether DAO governance
- * @dev Uses OpenZeppelin Governor modules for secure, standardized governance
- */
-contract Governor is
-    Governor,
-    GovernorCountingSimple,
-    GovernorSettings,
-    GovernorVotes,
-    AccessControl,
-    ReentrancyGuard
-{
+interface IVotingToken {
+    function getVotes(address account) external view returns (uint256);
+    function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
+    function delegate(address delegatee) external;
+}
+
+contract Governor is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
 
+    enum ProposalState {
+        Pending,
+        Active,
+        Succeeded,
+        Defeated,
+        Canceled,
+        Executed
+    }
+
+    struct Proposal {
+        address proposer;
+        address[] targets;
+        uint256[] values;
+        bytes[] calldatas;
+        string description;
+        uint256 createdAt;
+        uint256 forVotes;
+        uint256 againstVotes;
+        bool executed;
+        bool canceled;
+    }
+
+    IVotingToken public token;
     address public membershipContract;
     uint256 public votingDelay;
     uint256 public votingPeriod;
     uint256 public proposalThreshold;
+    uint256 public proposalCount;
+    string public name;
 
-    // Custom errors for gas efficiency
+    mapping(uint256 => Proposal) public proposals;
+    mapping(uint256 => mapping(address => bool)) public hasVoted;
+    mapping(uint256 => address[]) public voters;
+
     error NotMembershipHolder();
+    error InvalidMembershipContract();
     error InvalidProposalThreshold();
     error InvalidVotingDelay();
     error InvalidVotingPeriod();
@@ -42,32 +58,25 @@ contract Governor is
     event MembershipContractUpdated(address indexed oldContract, address indexed newContract);
     event VotingParametersUpdated(uint256 votingDelay, uint256 votingPeriod, uint256 proposalThreshold);
 
-    /**
-     * @notice Constructor to initialize the Governor
-     * @param _token The ERC20Votes token used for voting
-     * @param _membershipContract The membership NFT contract
-     * @param _votingDelay Delay before voting can start
-     * @param _votingPeriod Duration of voting period
-     * @param _proposalThreshold Minimum votes required to propose
-     * @param _initialAdmin Address to grant initial admin role
-     */
     constructor(
-        ERC20Votes _token,
+        IVotingToken _token,
         address _membershipContract,
         uint256 _votingDelay,
         uint256 _votingPeriod,
         uint256 _proposalThreshold,
         address _initialAdmin
-    ) Governor("Aether Governor") GovernorVotes(_token) {
+    ) {
         require(_membershipContract != address(0), "Invalid membership contract");
         require(_votingDelay > 0, "Invalid voting delay");
         require(_votingPeriod > 0, "Invalid voting period");
         require(_proposalThreshold > 0, "Invalid proposal threshold");
 
+        token = _token;
         membershipContract = _membershipContract;
         votingDelay = _votingDelay;
         votingPeriod = _votingPeriod;
         proposalThreshold = _proposalThreshold;
+        name = "Aether Governor";
 
         _grantRole(DEFAULT_ADMIN_ROLE, _initialAdmin);
         _grantRole(ADMIN_ROLE, _initialAdmin);
@@ -78,21 +87,21 @@ contract Governor is
         _setRoleAdmin(EXECUTOR_ROLE, ADMIN_ROLE);
     }
 
-    /**
-     * @notice Check if address is a membership holder
-     * @param _account Address to check
-     * @return isHolder Whether the address holds membership NFT
-     */
     function isMembershipHolder(address _account) public view returns (bool) {
-        // This would require calling the membership contract
-        // For now, we'll assume that voting power is based on token holdings
-        return IERC20Votes(token).getVotes(_account) > 0;
+        if (membershipContract == address(0)) return false;
+
+        (bool success, bytes memory data) = membershipContract.staticcall(
+            abi.encodeWithSignature("hasMembership(address)", _account)
+        );
+
+        if (!success || data.length == 0) return false;
+        return abi.decode(data, (bool));
     }
 
-    /**
-     * @notice Set the membership contract address
-     * @param _newMembershipContract New membership contract address
-     */
+    function _hasVotingPower(address _account) internal view returns (bool) {
+        return token.getVotes(_account) > 0;
+    }
+
     function setMembershipContract(address _newMembershipContract) external onlyRole(ADMIN_ROLE) {
         require(_newMembershipContract != address(0), "Invalid address");
         address oldContract = membershipContract;
@@ -100,20 +109,14 @@ contract Governor is
         emit MembershipContractUpdated(oldContract, _newMembershipContract);
     }
 
-    /**
-     * @notice Update voting parameters
-     * @param _newVotingDelay New voting delay
-     * @param _newVotingPeriod New voting period
-     * @param _newProposalThreshold New proposal threshold
-     */
     function setVotingParameters(
         uint256 _newVotingDelay,
         uint256 _newVotingPeriod,
         uint256 _newProposalThreshold
     ) external onlyRole(ADMIN_ROLE) {
-        require(_newVotingDelay > 0, InvalidVotingDelay());
-        require(_newVotingPeriod > 0, InvalidVotingPeriod());
-        require(_newProposalThreshold > 0, InvalidProposalThreshold());
+        require(_newVotingDelay > 0, "Invalid voting delay");
+        require(_newVotingPeriod > 0, "Invalid voting period");
+        require(_newProposalThreshold > 0, "Invalid proposal threshold");
 
         votingDelay = _newVotingDelay;
         votingPeriod = _newVotingPeriod;
@@ -122,122 +125,132 @@ contract Governor is
         emit VotingParametersUpdated(_newVotingDelay, _newVotingPeriod, _newProposalThreshold);
     }
 
-    /**
-     * @notice Override proposal creation to add membership check
-     */
     function propose(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) public override returns (uint256) {
-        if (!isMembershipHolder(msg.sender)) revert NotMembershipHolder();
-        return super.propose(targets, values, calldatas, description);
+    ) public returns (uint256) {
+        if (!_hasVotingPower(msg.sender)) revert NotMembershipHolder();
+
+        uint256 votingPower = token.getVotes(msg.sender);
+        if (votingPower <= proposalThreshold) {
+            revert("Governor: proposer votes below proposal threshold");
+        }
+
+        uint256 proposalId = proposalCount;
+        proposalCount++;
+
+        Proposal storage proposal = proposals[proposalId];
+        proposal.proposer = msg.sender;
+        proposal.targets = targets;
+        proposal.values = values;
+        proposal.calldatas = calldatas;
+        proposal.description = description;
+        proposal.createdAt = block.timestamp;
+
+        return proposalId;
     }
 
-    /**
-     * @notice Override vote to add membership check
-     */
-    function vote(uint256 proposalId, uint8 support) public override returns (uint256) {
+    function castVote(uint256 proposalId, uint8 support) public returns (uint256) {
         if (!isMembershipHolder(msg.sender)) revert NotMembershipHolder();
-        return super.vote(proposalId, support);
+
+        Proposal storage proposal = proposals[proposalId];
+        require(!proposal.canceled, "Governor: proposal already canceled");
+        require(!proposal.executed, "Governor: proposal already executed");
+        require(block.timestamp >= proposal.createdAt + votingDelay, "Governor: vote currently not allowed");
+        require(block.timestamp <= proposal.createdAt + votingDelay + votingPeriod, "Governor: vote already closed");
+        require(!hasVoted[proposalId][msg.sender], "Governor: already voted");
+
+        uint256 votingPower = token.getVotes(msg.sender);
+
+        if (support == 1) {
+            proposal.forVotes += votingPower;
+        } else {
+            proposal.againstVotes += votingPower;
+        }
+
+        hasVoted[proposalId][msg.sender] = true;
+        voters[proposalId].push(msg.sender);
+
+        return 1;
     }
 
-    /**
-     * @notice Override proposal execution to add authorization check
-     */
     function execute(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 descriptionHash
-    ) public payable override returns (uint256) {
+    ) public returns (uint256) {
         if (!hasRole(EXECUTOR_ROLE, msg.sender)) revert NotAuthorized();
-        return super.execute(targets, values, calldatas, descriptionHash);
+
+        Proposal storage proposal = proposals[proposalCount - 1];
+        require(!proposal.canceled, "Governor: proposal already canceled");
+        require(!proposal.executed, "Governor: proposal already executed");
+        require(state(proposalCount - 1) == ProposalState.Succeeded, "Governor: proposal not successful");
+
+        proposal.executed = true;
+        return proposalCount - 1;
     }
 
-    /**
-     * @notice Required Governor overrides
-     */
-    function votingDelay() public pure override returns (uint256) {
-        return votingDelay;
+    function cancel(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) public returns (uint256) {
+        Proposal storage proposal = proposals[proposalCount - 1];
+        require(!proposal.executed, "Governor: proposal already executed");
+        require(!proposal.canceled, "Governor: proposal already canceled");
+        require(block.timestamp < proposal.createdAt + votingDelay, "Governor: proposal cannot be cancelled");
+
+        proposal.canceled = true;
+        return proposalCount - 1;
     }
 
-    function votingPeriod() public pure override returns (uint256) {
-        return votingPeriod;
+    function proposalDeadline(uint256 proposalId) public view returns (uint256) {
+        return proposals[proposalId].createdAt + votingDelay + votingPeriod;
     }
 
-    function proposalThreshold() public pure override returns (uint256) {
-        return proposalThreshold;
-    }
-
-    function quorum(uint256 blockNumber)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        // 10% quorum requirement
+    function quorum(uint256 blockNumber) public view returns (uint256) {
         return token.getPastTotalSupply(blockNumber) / 10;
     }
 
-    function state(uint256 proposalId)
-        public
-        view
-        override
-        returns (ProposalState)
-    {
-        return super.state(proposalId);
+    function _quorumReached(uint256 proposalId) public view returns (bool) {
+        uint256 requiredQuorum = quorum(block.timestamp);
+        for (uint256 i = 0; i < voters[proposalId].length; i++) {
+            if (token.getVotes(voters[proposalId][i]) >= requiredQuorum) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    function proposalDeadline(uint256 proposalId)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        return super.proposalDeadline(proposalId);
-    }
+    function state(uint256 proposalId) public view returns (ProposalState) {
+        Proposal storage proposal = proposals[proposalId];
 
-    function _quorumReached(uint256 proposalId)
-        internal
-        view
-        override
-        returns (bool)
-    {
-        return super._quorumReached(proposalId);
-    }
+        if (proposal.canceled) return ProposalState.Canceled;
+        if (proposal.executed) return ProposalState.Executed;
 
-    function _voteSucceeded(uint256 proposalId)
-        internal
-        view
-        override
-        returns (bool)
-    {
-        return super._voteSucceeded(proposalId);
-    }
+        if (block.timestamp < proposal.createdAt + votingDelay) {
+            return ProposalState.Pending;
+        }
 
-    function _cancel(uint256 proposalId, address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
-        internal
-        override
-        returns (uint256)
-    {
-        return super._cancel(proposalId, targets, values, calldases, descriptionHash);
-    }
+        if (block.timestamp < proposal.createdAt + votingDelay + votingPeriod) {
+            return ProposalState.Active;
+        }
 
-    function _executor()
-        internal
-        view
-        override
-        returns (address)
-    {
-        return super._executor();
+        if (_quorumReached(proposalId) && proposal.forVotes >= proposal.againstVotes) {
+            return ProposalState.Succeeded;
+        }
+
+        return ProposalState.Defeated;
     }
 
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(Governor, GovernorSettings, AccessControl)
+        override(AccessControl)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

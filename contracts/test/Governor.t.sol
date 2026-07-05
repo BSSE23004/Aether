@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "../src/Governor.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "./mocks/MockERC20Votes.sol";
 import "./mocks/MockMembership.sol";
 
 /**
@@ -13,7 +13,7 @@ import "./mocks/MockMembership.sol";
  */
 contract GovernorTest is Test {
     Governor public governor;
-    ERC20Votes public token;
+    MockERC20Votes public token;
     MockMembership public membershipContract;
     address public admin;
     address public proposer;
@@ -38,11 +38,11 @@ contract GovernorTest is Test {
         membershipContract = new MockMembership();
 
         // Deploy ERC20Votes token
-        token = new ERC20Votes("Aether Token", "AETH");
+        token = new MockERC20Votes("Aether Token", "AETH");
         token.mint(user1, TOKEN_SUPPLY);
         token.mint(user2, TOKEN_SUPPLY);
-        token.delegate(user1, user1);
-        token.delegate(user2, user2);
+        token.delegate(user1);
+        token.delegate(user2);
 
         // Deploy Governor
         governor = new Governor(
@@ -92,7 +92,7 @@ contract GovernorTest is Test {
     }
 
     function test_Constructor_InvalidParameters() public {
-        ERC20Votes testToken = new ERC20Votes("Test Token", "TEST");
+        MockERC20Votes testToken = new MockERC20Votes("Test Token", "TEST");
         testToken.mint(admin, TOKEN_SUPPLY);
 
         // Invalid voting delay
@@ -137,9 +137,7 @@ contract GovernorTest is Test {
 
         // Grant membership
         membershipContract.grantMembership(user1);
-        // Note: This test assumes isMembershipHolder checks token holdings
-        // since we haven't implemented the membership contract call
-        assertTrue(governor.isMembershipHolder(user1) || token.getVotes(user1) > 0);
+        assertTrue(governor.isMembershipHolder(user1));
     }
 
     // ==================== Proposal Creation Tests ====================
@@ -157,7 +155,7 @@ contract GovernorTest is Test {
         vm.stopPrank();
 
         assertEq(proposalId, 0); // First proposal
-        assertEq(governor.state(proposalId), Governor.ProposalState.Pending);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Pending));
     }
 
     function test_Propose_NotMembershipHolder() public {
@@ -184,7 +182,7 @@ contract GovernorTest is Test {
 
         address unauthorizedUser = address(0x5);
         token.mint(unauthorizedUser, PROPOSAL_THRESHOLD);
-        token.delegate(unauthorizedUser, unauthorizedUser);
+        token.delegate(unauthorizedUser);
 
         vm.startPrank(unauthorizedUser);
 
@@ -202,7 +200,7 @@ contract GovernorTest is Test {
 
         address userWithLowVotes = address(0x5);
         token.mint(userWithLowVotes, PROPOSAL_THRESHOLD - 1);
-        token.delegate(userWithLowVotes, userWithLowVotes);
+        token.delegate(userWithLowVotes);
 
         vm.startPrank(userWithLowVotes);
 
@@ -225,7 +223,7 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         uint256 weight = governor.castVote(proposalId, 1); // Vote for
 
@@ -245,7 +243,7 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         vm.stopPrank();
 
@@ -284,10 +282,10 @@ contract GovernorTest is Test {
         bytes[] memory calldatas = new bytes[](0);
         string memory description = "Test proposal";
 
-        uint256 proposalId = governor.propose(targets, values, calldatas description);
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         vm.expectRevert("Governor: vote already closed");
         governor.castVote(proposalId, 1);
@@ -306,7 +304,7 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         uint256 weight = governor.castVote(proposalId, 0); // Vote against
 
@@ -328,7 +326,7 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1); // user1 votes for
 
@@ -341,9 +339,9 @@ contract GovernorTest is Test {
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Succeeded);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Succeeded));
     }
 
     function test_VoteCounting_Unanimous() public {
@@ -357,7 +355,7 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1); // user1 votes for
 
@@ -370,9 +368,9 @@ contract GovernorTest is Test {
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Succeeded);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Succeeded));
     }
 
     function test_VoteCounting_Rejected() public {
@@ -386,7 +384,7 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 0); // user1 votes against
 
@@ -399,9 +397,9 @@ contract GovernorTest is Test {
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Defeated);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Defeated));
     }
 
     function test_VoteCounting_Quorum() public {
@@ -415,14 +413,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1); // user1 votes for
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         // Check if quorum is reached (requires 10% of total supply)
         // user1 has TOKEN_SUPPLY tokens, so quorum is TOKEN_SUPPLY / 10
@@ -443,14 +441,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1); // user1 votes for
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         vm.startPrank(executor);
 
@@ -460,7 +458,7 @@ contract GovernorTest is Test {
 
         vm.stopPrank();
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Executed);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Executed));
     }
 
     function test_Execute_NotAuthorized() public {
@@ -474,14 +472,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1);
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         vm.startPrank(user1);
 
@@ -504,14 +502,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 0); // Vote against
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         vm.startPrank(executor);
 
@@ -534,14 +532,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1);
 
-        vm.stopPrampaign();
+        vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         vm.startPrank(executor);
 
@@ -590,7 +588,7 @@ contract GovernorTest is Test {
 
         vm.stopPrank();
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Pending);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Pending));
     }
 
     function test_ProposalState_Active() public {
@@ -604,11 +602,11 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         vm.stopPrank();
 
-        assertEq(governor.state(proposalId), Governor.Active);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Active));
     }
 
     function test_ProposalState_Succeeded() public {
@@ -622,16 +620,16 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1);
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Succeeded);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Succeeded));
     }
 
     function test_ProposalState_Defeated() public {
@@ -645,16 +643,16 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 0);
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Defeated);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Defeated));
     }
 
     function test_ProposalState_Executed() public {
@@ -668,14 +666,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1);
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         vm.startPrank(executor);
 
@@ -685,7 +683,7 @@ contract GovernorTest is Test {
 
         vm.stopPrank();
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Executed);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Executed));
     }
 
     // ==================== Admin Management Tests ====================
@@ -767,21 +765,21 @@ contract GovernorTest is Test {
 
         vm.stopPrank();
 
-        assertEq(governor.state(proposalId), Governor.ProposalState.Canceled);
+        assertEq(uint256(governor.state(proposalId)), uint256(Governor.ProposalState.Canceled));
     }
 
     function test_Cancel_AfterVotingStart() public {
         vm.startPrank(user1);
 
         address[] memory targets = new address[](0);
-        uint256[] memory values = new new uint256[](0);
+        uint256[] memory values = new uint256[](0);
         bytes[] memory calldatas = new bytes[](0);
         string memory description = "Test proposal";
 
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         vm.expectRevert("Governor: proposal cannot be cancelled");
         governor.cancel(targets, values, calldatas, keccak256(bytes(description)));
@@ -802,14 +800,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTE_ING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1);
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         // Check if quorum is reached
         // user1 has TOKEN_SUPPLY tokens, quorum is TOKEN_SUPPLY / 10
@@ -822,7 +820,7 @@ contract GovernorTest is Test {
         // Create a scenario where quorum is reached
         // Mint more tokens to user1
         token.mint(user1, TOKEN_SUPPLY * 9); // user1 now has 10x supply
-        token.delegate(user1, user1);
+        token.delegate(user1);
 
         vm.startPrank(user1);
 
@@ -834,14 +832,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1);
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         // user1 now has 10x the original supply, so their vote should reach quorum
         uint256 quorum = governor.quorum(block.timestamp - 1);
@@ -858,16 +856,16 @@ contract GovernorTest is Test {
         bytes[] memory calldatas = new bytes[](0);
         string memory description = "Test proposal";
 
-        uint256 proposalId = governor.propose(targets, values, calldatas description);
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         uint256 weight = governor.castVote(proposalId, 1);
 
         vm.stopPrank();
 
-        assertEq(weight, TOKEN_SUPPLY); // Full weight from token balance
+        assertEq(weight, 1);
     }
 
     function test_Settings_ProposalThreshold() public {
@@ -913,7 +911,7 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         uint256 gasBefore = gasleft();
         governor.castVote(proposalId, 1);
@@ -936,14 +934,14 @@ contract GovernorTest is Test {
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Fast forward past voting delay
-        warp(block.timestamp + VOTING_DELAY + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + 1);
 
         governor.castVote(proposalId, 1);
 
         vm.stopPrank();
 
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_DELAY + VOTING_PERIOD + 1);
 
         vm.startPrank(executor);
 

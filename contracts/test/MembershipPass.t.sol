@@ -193,7 +193,7 @@ contract MembershipPassTest is Test {
     }
 
     function test_MintMembership_TransferToTreasury() public {
-        uint256 treasuryBalance = membershipPass.treasury.balance;
+        uint256 treasuryBalance = address(membershipPass.treasury()).balance;
 
         vm.startPrank(user1);
 
@@ -205,7 +205,7 @@ contract MembershipPassTest is Test {
 
         vm.stopPrank();
 
-        assertEq(membershipPass.treasury.balance, treasuryBalance + MEMBERSHIP_PRICE);
+        assertEq(address(membershipPass.treasury()).balance, treasuryBalance + MEMBERSHIP_PRICE);
     }
 
     function test_MintMembership_Multiple() public {
@@ -270,7 +270,7 @@ contract MembershipPassTest is Test {
     }
 
     function test_AdminMint_NoPayment() public {
-        uint256 treasuryBalance = membershipPass.treasury.balance;
+        uint256 treasuryBalance = address(membershipPass.treasury()).balance;
 
         vm.startPrank(minter);
 
@@ -278,7 +278,7 @@ contract MembershipPassTest is Test {
 
         vm.stopPrank();
 
-        assertEq(membershipPass.treasury.balance, treasuryBalance); // No payment transferred
+        assertEq(address(membershipPass.treasury()).balance, treasuryBalance); // No payment transferred
     }
 
     // ==================== Burning Tests ====================
@@ -391,7 +391,7 @@ contract MembershipPassTest is Test {
         vm.stopPrank();
 
         // Fast forward past expiry
-        warp(block.timestamp + 2);
+        vm.warp(block.timestamp + 2);
 
         assertTrue(!membershipPass.hasValidMembership(user1));
     }
@@ -778,64 +778,6 @@ contract MembershipPassTest is Test {
 
         assertEq(membershipPass.getMembershipExpiry(user1), newExpiry);
     }
-
-    // ==================== Gas Efficiency Tests ====================
-
-    function test_Gas_MintMembership() public {
-        vm.startPrank(user1);
-
-        uint256 gasBefore = gasleft();
-        membershipPass.mintMembership{value: MEMBERSHIP_PRICE}(
-            user1,
-            METADATA_URI,
-            EXPIRY_TIME
-        );
-        uint256 gasAfter = gasleft();
-        uint256 gasUsed = gasBefore - gasAfter;
-
-        console.log("Gas used for mintMembership:", gasUsed);
-
-        vm.stopPrank();
-    }
-
-    function test_Gas_BurnMembership() public {
-        vm.startPrank(user1);
-
-        uint256 tokenId = membershipPass.mintMembership{value: MEMBERSHIP_PRICE}(
-            user1,
-            METADATA_URI,
-            EXPIRY_TIME
-        );
-
-        uint256 gasBefore = gasleft();
-        membershipPass.burnMembership(tokenId);
-        uint256 gasAfter = gasleft();
-        uint256 gasUsed = gasBefore - gasAfter;
-
-        console.log("Gas used for burnMembership:", gasUsed);
-
-        vm.stopPrank();
-    }
-
-    function test_Gas_HasValidMembership() public {
-        vm.startPrank(user1);
-
-        membershipPass.mintMembership{value: MEMBERSHIP_PRICE}(
-            user1,
-            METADATA_URI,
-            EXPIRY_TIME
-        );
-
-        vm.stopPrank();
-
-        uint256 gasBefore = gasleft();
-        membershipPass.hasValidMembership(user1);
-        uint256 gasAfter = gasleft();
-        uint256 gasUsed = gasBefore - gasAfter;
-
-        console.log("Gas used for hasValidMembership:", gasUsed);
-    }
-}
 
     // ==================== Gas Efficiency Tests ====================
 

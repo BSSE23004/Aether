@@ -141,9 +141,9 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
         string memory _name,
         string memory _description,
         string memory _metadataURI
-    ) external nonCont onlyRole(CREATOR_ROLE) returns (uint256) {
+    ) external nonReentrant onlyRole(CREATOR_ROLE) returns (uint256) {
         // Check if community name already exists
-        require(!communityNameExists[_name], CommunityAlreadyExists());
+        if (communityNameExists[_name]) revert CommunityAlreadyExists();
         
         // Validate name and description
         require(bytes(_name).length > 0, "Name cannot be empty");
@@ -215,16 +215,16 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
         string memory _name,
         string memory _description,
         string memory _metadataURI
-    ) external nonCont {
-        require(communities[_communityId].isActive, CommunityNotActive());
+    ) external nonReentrant {
+        require(communities[_communityId].isActive, "Community not active");
         require(
             _isCommunityAdmin(_communityId, msg.sender) || hasRole(ADMIN_ROLE, msg.sender),
-            UnauthorizedAccess()
+            "Unauthorized access"
         );
 
         // Validate name if changed
         if (bytes(_name).length > 0 && keccak256(bytes(_name)) != keccak256(bytes(communities[_communityId].name))) {
-            require(!communityNameExists[_name], CommunityAlreadyExists());
+            if (communityNameExists[_name]) revert CommunityAlreadyExists();
             require(bytes(_name).length <= 100, "Name too long");
             
             // Update name tracking
@@ -267,11 +267,11 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
      * @notice Deactivate a community
      * @param _communityId Community ID to deactivate
      */
-    function deactivateCommunity(uint256 _communityId) external nonCont {
-        require(communities[_communityId].isActive, CommunityNotActive());
+    function deactivateCommunity(uint256 _communityId) external nonReentrant {
+        require(communities[_communityId].isActive, "Community not active");
         require(
             _isCommunityAdmin(_communityId, msg.sender) || hasRole(ADMIN_ROLE, msg.sender),
-            UnauthorizedAccess()
+            "Unauthorized access"
         );
 
         communities[_communityId].isActive = false;
@@ -284,7 +284,7 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
      * @notice Reactivate a community
      * @param _communityId Community ID to reactivate
      */
-    function activateCommunity(uint256 _communityId) external nonCont onlyRole(ADMIN_ROLE) {
+    function activateCommunity(uint256 _communityId) external nonReentrant onlyRole(ADMIN_ROLE) {
         require(!communities[_communityId].isActive, "Community already active");
 
         communities[_communityId].isActive = true;
@@ -298,14 +298,11 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
      * @param _communityId Community ID
      * @param _admin Address to add as admin
      */
-    function addCommunityAdmin(uint256 _communityId, address _admin) external nonCont {
-        require(communities[_communityId].isActive, CommunityNotActive());
+    function addCommunityAdmin(uint256 _communityId, address _admin) external nonReentrant {
+        if (!communities[_communityId].isActive) revert CommunityNotActive();
         require(_admin != address(0), "Invalid address");
-        require(
-            _isCommunityAdmin(_communityId, msg.sender) || hasRole(ADMIN_ROLE, msg.sender),
-            UnauthorizedAccess()
-        );
-        require(!communityAdmins[_communityId][_admin], AlreadyAdmin());
+        if (!_isCommunityAdmin(_communityId, msg.sender) && !hasRole(ADMIN_ROLE, msg.sender)) revert UnauthorizedAccess();
+        if (communityAdmins[_communityId][_admin]) revert AlreadyAdmin();
 
         communityAdmins[_communityId][_admin] = true;
         communityAdminList[_communityId].push(_admin);
@@ -318,13 +315,10 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
      * @param _communityId Community ID
      * @param _admin Address to remove as admin
      */
-    function removeCommunityAdmin(uint256 _communityId, address _admin) external nonCont {
-        require(communities[_communityId].isActive, CommunityNotActive());
-        require(
-            _isCommunityAdmin(_communityId, msg.sender) || hasRole(ADMIN_ROLE, msg.sender),
-            UnauthorizedAccess()
-        );
-        require(communityAdmins[_communityId][_admin], NotAdmin());
+    function removeCommunityAdmin(uint256 _communityId, address _admin) external nonReentrant {
+        if (!communities[_communityId].isActive) revert CommunityNotActive();
+        if (!_isCommunityAdmin(_communityId, msg.sender) && !hasRole(ADMIN_ROLE, msg.sender)) revert UnauthorizedAccess();
+        if (!communityAdmins[_communityId][_admin]) revert NotAdmin();
         
         // Cannot remove the creator
         require(communities[_communityId].creator != _admin, "Cannot remove creator");
@@ -341,12 +335,9 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
      * @notice Request verification for a community
      * @param _communityId Community ID to verify
      */
-    function requestVerification(uint256 _communityId) external nonCont {
-        require(communities[_communityId].isActive, CommunityNotActive());
-        require(
-            _isCommunityAdmin(_communityId, msg.sender),
-            UnauthorizedAccess()
-        );
+    function requestVerification(uint256 _communityId) external nonReentrant {
+        if (!communities[_communityId].isActive) revert CommunityNotActive();
+        if (!_isCommunityAdmin(_communityId, msg.sender)) revert UnauthorizedAccess();
         require(!communities[_communityId].isVerified, "Already verified");
         require(!verificationRequested[_communityId], "Already requested");
 
@@ -359,8 +350,8 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
      * @notice Verify a community (platform admin only)
      * @param _communityId Community ID to verify
      */
-    function verifyCommunity(uint256 _communityId) external nonCont onlyRole(ADMIN_ROLE) {
-        require(communities[_communityId].isActive, CommunityNotActive());
+    function verifyCommunity(uint256 _communityId) external nonReentrant onlyRole(ADMIN_ROLE) {
+        require(communities[_communityId].isActive, "Community not active");
         require(verificationRequested[_communityId], "No verification request");
 
         communities[_communityId].isVerified = true;
@@ -381,12 +372,9 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
         uint256 _memberCount,
         uint256 _channelCount,
         uint256 _messageCount
-    ) external nonCont {
-        require(communities[_communityId].isActive, CommunityNotActive());
-        require(
-            _isCommunityAdmin(_communityId, msg.sender) || hasRole(MODERATOR_ROLE, msg.sender),
-            UnauthorizedAccess()
-        );
+    ) external nonReentrant {
+        if (!communities[_communityId].isActive) revert CommunityNotActive();
+        if (!_isCommunityAdmin(_communityId, msg.sender) && !hasRole(MODERATOR_ROLE, msg.sender)) revert UnauthorizedAccess();
 
         communityStats[_communityId] = CommunityStats({
             memberCount: _memberCount,
@@ -402,21 +390,64 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
     /**
      * @notice Get community details
      * @param _communityId Community ID
-     * @return Community struct with all details
+     * @return id Community ID
+     * @return name Community name
+     * @return description Community description
+     * @return metadataURI Community metadata URI
+     * @return creator Community creator address
+     * @return admin Community admin address
+     * @return createdAt Community creation timestamp
+     * @return updatedAt Community update timestamp
+     * @return isActive Whether the community is active
+     * @return isVerified Whether the community is verified
      */
-    function getCommunity(uint256 _communityId) external view returns (Community memory) {
-        require(communities[_communityId].id != 0, CommunityNotFound());
-        return communities[_communityId];
+    function getCommunity(uint256 _communityId)
+        external
+        view
+        returns (
+            uint256 id,
+            string memory name,
+            string memory description,
+            string memory metadataURI,
+            address creator,
+            address admin,
+            uint256 createdAt,
+            uint256 updatedAt,
+            bool isActive,
+            bool isVerified
+        )
+    {
+        require(communities[_communityId].id != 0, "Community not found");
+        Community memory community = communities[_communityId];
+        return (
+            community.id,
+            community.name,
+            community.description,
+            community.metadataURI,
+            community.creator,
+            community.admin,
+            community.createdAt,
+            community.updatedAt,
+            community.isActive,
+            community.isVerified
+        );
     }
 
     /**
      * @notice Get community statistics
      * @param _communityId Community ID
-     * @return CommunityStats struct with statistics
+     * @return memberCount Community member count
+     * @return channelCount Community channel count
+     * @return messageCount Community message count
      */
-    function getCommunityStats(uint256 _communityId) external view returns (CommunityStats memory) {
-        require(communities[_communityId].id != 0, CommunityNotFound());
-        return communityStats[_communityId];
+    function getCommunityStats(uint256 _communityId)
+        external
+        view
+        returns (uint256 memberCount, uint256 channelCount, uint256 messageCount)
+    {
+        require(communities[_communityId].id != 0, "Community not found");
+        CommunityStats memory stats = communityStats[_communityId];
+        return (stats.memberCount, stats.channelCount, stats.messageCount);
     }
 
     /**
@@ -498,7 +529,7 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
 
     function _validateMetadataURI(string memory _uri) internal pure {
         bytes memory uriBytes = bytes(_uri);
-        require(uriBytes.length > 0, InvalidMetadata());
+        require(uriBytes.length > 0, "Invalid metadata");
         require(uriBytes.length <= 500, "Metadata URI too long");
         
         // Basic validation for IPFS or HTTP(S)
@@ -514,7 +545,9 @@ contract CommunityRegistry is AccessControl, Ownable, ReentrancyGuard {
                 (prefixBytes[0] == 'h' && prefixBytes[1] == 't' && prefixBytes[2] == 't' && prefixBytes[3] == 'p' && prefixBytes[4] == ':') || // http:
                 (prefixBytes[0] == 'h' && prefixBytes[1] == 't' && prefixBytes[2] == 't' && prefixBytes[3] == 'p' && prefixBytes[4] == 's' && prefixBytes[5] == ':'); // https:
             
-            require(isValid, "Invalid metadata URI format");
+            if (!isValid) revert InvalidMetadata();
+        } else {
+            revert InvalidMetadata();
         }
     }
 

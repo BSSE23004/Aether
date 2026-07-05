@@ -105,7 +105,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
         address _to,
         string memory _metadataURI,
         uint256 _expiry
-    ) external payable nonCont returns (uint256) {
+    ) external payable nonReentrant returns (uint256) {
         if (_to == address(0)) revert ZeroAddress();
         if (msg.value < membershipPrice) revert InsufficientPayment();
         if (maxSupply > 0 && totalMinted >= maxSupply) revert MaxSupplyReached();
@@ -146,7 +146,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
         address _to,
         string memory _metadataURI,
         uint256 _expiry
-    ) external onlyRole(MINTER_ROLE) nonCont returns (uint256) {
+    ) external onlyRole(MINTER_ROLE) nonReentrant returns (uint256) {
         if (_to == address(0)) revert ZeroAddress();
         if (maxSupply > 0 && totalMinted >= maxSupply) revert MaxSupplyReached();
         if (_expiry != 0 && _expiry <= block.timestamp) revert InvalidExpiry();
@@ -173,7 +173,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
      * @notice Burn a membership pass
      * @param _tokenId Token ID to burn
      */
-    function burnMembership(uint256 _tokenId) external nonCont {
+    function burnMembership(uint256 _tokenId) external nonReentrant {
         if (!_isApprovedOrOwner(msg.sender, _tokenId)) revert NotTokenOwner();
         if (totalMinted == 0) revert InvalidTokenId();
 
@@ -228,7 +228,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
 
         membershipExpiry[_member] = _newExpiry;
 
-        emit MembershipExtended(_member, _member, _newExpiry, block.timestamp);
+        emit MembershipExtended(0, _member, _newExpiry, block.timestamp);
     }
 
     /**
@@ -266,7 +266,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
      * @return metadataURI Metadata URI
      */
     function getTokenMetadata(uint256 _tokenId) external view returns (string memory) {
-        if (!_exists(_tokenId)) revert InvalidTokenId();
+        if (_ownerOf(_tokenId) == address(0)) revert InvalidTokenId();
         return tokenMetadata[_tokenId];
     }
 
@@ -285,7 +285,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
      * @return timestamp Mint timestamp
      */
     function getTokenMintedAt(uint256 _tokenId) external view returns (uint256) {
-        if (!_exists(_tokenId)) revert InvalidTokenId();
+        if (_ownerOf(_tokenId) == address(0)) revert InvalidTokenId();
         return mintedAt[_tokenId];
     }
 
@@ -295,7 +295,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
      * @return isBurnable Whether the token can be burned
      */
     function isTokenBurnable(uint256 _tokenId) external view returns (bool) {
-        if (!_exists(_tokenId)) return false;
+        if (_ownerOf(_tokenId) == address(0)) return false;
         return true; // All tokens are burnable in this implementation
     }
 
@@ -304,7 +304,7 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
      * @return minted Total minted
      * @return burned Total burned
      * @return supply Current supply
-     * @return maxSupply Maximum supply
+     * @return maxSupplyValue Maximum supply
      */
     function getStats() external view returns (
         uint256 minted,
@@ -313,6 +313,10 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
         uint256 maxSupplyValue
     ) {
         return (totalMinted, totalBurned, totalSupply(), maxSupply);
+    }
+
+    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
+        super._increaseBalance(account, value);
     }
 
     /**
@@ -368,6 +372,6 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
     // Internal helper
 
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
-        return _isAuthorized(spender, tokenId);
+        return _isAuthorized(ownerOf(tokenId), spender, tokenId);
     }
 }

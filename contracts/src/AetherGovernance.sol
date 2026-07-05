@@ -67,7 +67,7 @@ contract AetherGovernance is AccessControl, ReentrancyGuard {
     function createProposal(
         string memory _title,
         string memory _description
-    ) external nonCont returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         totalProposals++;
         uint256 proposalId = totalProposals;
 
@@ -86,7 +86,7 @@ contract AetherGovernance is AccessControl, ReentrancyGuard {
         return proposalId;
     }
 
-    function vote(uint256 _proposalId, bool _support) external nonCont {
+    function vote(uint256 _proposalId, bool _support) external nonReentrant {
         require(proposals[_proposalId].state == ProposalState.Active, "Not active");
         require(!hasVoted[_proposalId][msg.sender], "Already voted");
         require(
@@ -105,23 +105,7 @@ contract AetherGovernance is AccessControl, ReentrancyGuard {
         emit Voted(_proposalId, msg.sender, _support);
     }
 
-    function executeProposal(uint256 _proposalId) external nonCont {
-        require(!proposals[_proposalId].executed, "Already executed");
-        require(
-            proposals[_proposalId].state == ProposalState.Passed,
-            "Not passed"
-        );
-
-        proposals[_proposalId].executed = true;
-        proposals[_proposalId].state = ProposalState.Executed;
-        emit ProposalExecuted(_proposalId);
-    }
-
-    function getProposal(uint256 _proposalId) external view returns (Proposal memory) {
-        return proposals[_proposalId];
-    }
-
-    function getProposalState(uint256 _proposalId) external view returns (ProposalState) {
+    function getProposalState(uint256 _proposalId) public view returns (ProposalState) {
         Proposal memory proposal = proposals[_proposalId];
         
         if (proposal.executed) {
@@ -144,6 +128,45 @@ contract AetherGovernance is AccessControl, ReentrancyGuard {
         }
         
         return proposal.state;
+    }
+
+    function executeProposal(uint256 _proposalId) external nonReentrant {
+        require(!proposals[_proposalId].executed, "Already executed");
+        require(
+            getProposalState(_proposalId) == ProposalState.Passed,
+            "Not passed"
+        );
+
+        proposals[_proposalId].executed = true;
+        proposals[_proposalId].state = ProposalState.Executed;
+        emit ProposalExecuted(_proposalId);
+    }
+
+    function getProposal(uint256 _proposalId)
+        external
+        view
+        returns (
+            string memory title,
+            string memory description,
+            address proposer,
+            uint256 createdAt,
+            uint256 votesFor,
+            uint256 votesAgainst,
+            uint256 state,
+            bool executed
+        )
+    {
+        Proposal memory proposal = proposals[_proposalId];
+        return (
+            proposal.title,
+            proposal.description,
+            proposal.proposer,
+            proposal.createdAt,
+            proposal.votesFor,
+            proposal.votesAgainst,
+            uint256(proposal.state),
+            proposal.executed
+        );
     }
 
     function supportsInterface(bytes4 interfaceId)

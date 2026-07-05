@@ -88,7 +88,7 @@ contract AetherGovernanceTest is Test {
         
         vm.stopPrank();
         
-        warp(block.timestamp + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_PERIOD + 1);
         
         vm.startPrank(user1);
         
@@ -107,7 +107,7 @@ contract AetherGovernanceTest is Test {
         vm.stopPrank();
         
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_PERIOD + 1);
         
         // Proposal should be passed
         assertEq(uint256(governance.getProposalState(proposalId)), uint256(AetherGovernance.ProposalState.Passed));
@@ -130,7 +130,7 @@ contract AetherGovernanceTest is Test {
         vm.stopPrank();
         
         // Fast forward past voting period with no votes
-        warp(block.timestamp + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_PERIOD + 1);
         
         vm.startPrank(user1);
         
@@ -153,7 +153,7 @@ contract AetherGovernanceTest is Test {
         vm.stopPrank();
         
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_PERIOD + 1);
         
         // Should be Passed
         assertEq(uint256(governance.getProposalState(proposalId)), uint256(AetherGovernance.ProposalState.Passed));
@@ -187,7 +187,7 @@ contract AetherGovernanceTest is Test {
         vm.stopPrank();
         
         // Fast forward past voting period
-        warp(block.timestamp + VOTING_PERIOD + 1);
+        vm.warp(block.timestamp + VOTING_PERIOD + 1);
         
         vm.startPrank(user2);
         
