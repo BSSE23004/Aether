@@ -174,20 +174,12 @@ contract MembershipPass is ERC721, ERC721Enumerable, AccessControl, Ownable, Ree
      * @param _tokenId Token ID to burn
      */
     function burnMembership(uint256 _tokenId) external nonReentrant {
-        if (!_isApprovedOrOwner(msg.sender, _tokenId)) revert NotTokenOwner();
-        if (totalMinted == 0) revert InvalidTokenId();
-
+        // This will revert with ERC721NonexistentToken if token does not exist
         address owner = ownerOf(_tokenId);
         
-        // Update storage before burning
-        delete tokenOwner[_tokenId];
-        delete mintedAt[_tokenId];
-        delete tokenMetadata[_tokenId];
-        userMembershipCount[owner]--;
-        delete membershipExpiry[owner];
+        if (!_isApprovedOrOwner(msg.sender, _tokenId)) revert NotTokenOwner();
 
-        totalBurned++;
-
+        // Let _update handle the state changes for burning
         _burn(_tokenId);
 
         emit MembershipBurned(_tokenId, owner, block.timestamp);

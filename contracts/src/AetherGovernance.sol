@@ -130,7 +130,7 @@ contract AetherGovernance is AccessControl, ReentrancyGuard {
         return proposal.state;
     }
 
-    function executeProposal(uint256 _proposalId) external nonReentrant {
+    function executeProposal(uint256 _proposalId) external nonReentrant onlyRole(ADMIN_ROLE) {
         require(!proposals[_proposalId].executed, "Already executed");
         require(
             getProposalState(_proposalId) == ProposalState.Passed,

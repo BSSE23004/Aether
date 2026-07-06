@@ -113,7 +113,7 @@ contract CommunityRegistryTest is Test {
         vm.expectRevert("Description too long");
         registry.createCommunity(
             COMMUNITY_NAME,
-            "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+            "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident",
             METADATA_URI
         );
         
@@ -272,7 +272,7 @@ contract CommunityRegistryTest is Test {
         
         registry.deactivateCommunity(communityId);
         
-        vm.expectRevert(CommunityRegistry.CommunityNotActive.selector);
+        vm.expectRevert("Community not active");
         registry.updateCommunity(communityId, "New Name", "New Description", METADATA_URI);
         
         vm.stopPrank();
@@ -291,7 +291,7 @@ contract CommunityRegistryTest is Test {
         
         vm.startPrank(user1);
         
-        vm.expectRevert(CommunityRegistry.UnauthorizedAccess.selector);
+        vm.expectRevert("Unauthorized access");
         registry.updateCommunity(communityId, "New Name", "New Description", METADATA_URI);
         
         vm.stopPrank();
@@ -349,7 +349,7 @@ contract CommunityRegistryTest is Test {
         
         registry.deactivateCommunity(communityId);
         
-        vm.expectRevert(CommunityRegistry.CommunityNotActive.selector);
+        vm.expectRevert("Community not active");
         registry.deactivateCommunity(communityId);
         
         vm.stopPrank();
@@ -368,7 +368,7 @@ contract CommunityRegistryTest is Test {
         
         vm.startPrank(user1);
         
-        vm.expectRevert(CommunityRegistry.UnauthorizedAccess.selector);
+        vm.expectRevert("Unauthorized access");
         registry.deactivateCommunity(communityId);
         
         vm.stopPrank();
@@ -868,7 +868,7 @@ contract CommunityRegistryTest is Test {
     }
 
     function test_GetCommunity_NotFound() public {
-        vm.expectRevert(CommunityRegistry.CommunityNotFound.selector);
+        vm.expectRevert("Community not found");
         registry.getCommunity(999);
     }
 

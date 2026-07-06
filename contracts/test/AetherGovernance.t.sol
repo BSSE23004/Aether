@@ -112,14 +112,11 @@ contract AetherGovernanceTest is Test {
         // Proposal should be passed
         assertEq(uint256(governance.getProposalState(proposalId)), uint256(AetherGovernance.ProposalState.Passed));
         
-        vm.startPrank(user1);
-        
+        // admin (address(this)) has ADMIN_ROLE and can execute
         governance.executeProposal(proposalId);
         
         (, , , , , , , bool executed) = governance.getProposal(proposalId);
         assertTrue(executed);
-        
-        vm.stopPrank();
     }
 
     function test_ExecuteProposal_NotPassed() public {
@@ -132,12 +129,8 @@ contract AetherGovernanceTest is Test {
         // Fast forward past voting period with no votes
         vm.warp(block.timestamp + VOTING_PERIOD + 1);
         
-        vm.startPrank(user1);
-        
         vm.expectRevert("Not passed");
         governance.executeProposal(proposalId);
-        
-        vm.stopPrank();
     }
 
     function test_GetProposalState() public {
@@ -189,11 +182,30 @@ contract AetherGovernanceTest is Test {
         // Fast forward past voting period
         vm.warp(block.timestamp + VOTING_PERIOD + 1);
         
+        // user2 does not have ADMIN_ROLE, so execution should revert
         vm.startPrank(user2);
         
         vm.expectRevert();
         governance.executeProposal(proposalId);
         
         vm.stopPrank();
+    }
+
+    function test_ExecuteProposal_AdminCanExecute() public {
+        vm.startPrank(user1);
+        
+        uint256 proposalId = governance.createProposal("Test Proposal", "Test Description");
+        governance.vote(proposalId, true);
+        
+        vm.stopPrank();
+        
+        // Fast forward past voting period
+        vm.warp(block.timestamp + VOTING_PERIOD + 1);
+        
+        // admin (address(this)) has ADMIN_ROLE, so execution should succeed
+        governance.executeProposal(proposalId);
+        
+        (, , , , , , , bool executed) = governance.getProposal(proposalId);
+        assertTrue(executed);
     }
 }

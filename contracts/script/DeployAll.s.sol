@@ -7,6 +7,8 @@ import "../src/AetherCommunity.sol";
 import "../src/AetherGovernance.sol";
 import "../src/AetherMembership.sol";
 import "../src/MembershipPass.sol";
+import "../src/Governor.sol";
+import "../test/mocks/MockERC20Votes.sol"; // For deploying a dummy voting token
 
 /**
  * @title DeployAll
@@ -17,9 +19,11 @@ contract DeployAll is Script {
     // Deployed contract addresses
     CommunityRegistry public registryContract;
     AetherCommunity public communityContract;
-    AetherGovernance public governanceContract;
+    AetherGovernance public legacyGovernanceContract;
+    Governor public governorContract;
     AetherMembership public membershipContract;
     MembershipPass public membershipPassContract;
+    MockERC20Votes public votingToken;
 
     // Deployment parameters
     string constant COMMUNITY_NAME = "Aether";
@@ -30,6 +34,10 @@ contract DeployAll is Script {
     uint256 constant QUORUM_PERCENTAGE = 10; // 10% quorum required
     uint256 constant MEMBERSHIP_PRICE = 0.01 ether; // Low cost for students
     uint256 constant MAX_SUPPLY = 10000; // Membership pass max supply
+
+    // Governor specific params
+    uint256 constant VOTING_DELAY = 1 days;
+    uint256 constant PROPOSAL_THRESHOLD = 1e18;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -58,26 +66,41 @@ contract DeployAll is Script {
         );
         console.log("AetherMembership deployed at:", address(membershipContract));
 
-        // Deploy governance contract
-        governanceContract = new AetherGovernance(
+        // Deploy legacy governance contract
+        legacyGovernanceContract = new AetherGovernance(
             address(membershipContract),
             VOTING_PERIOD,
             QUORUM_PERCENTAGE
         );
-        console.log("AetherGovernance deployed at:", address(governanceContract));
+        console.log("Legacy AetherGovernance deployed at:", address(legacyGovernanceContract));
 
         // Deploy community contract
         communityContract = new AetherCommunity(
             address(membershipContract),
-            address(governanceContract),
+            address(legacyGovernanceContract),
             COMMUNITY_NAME,
             COMMUNITY_DESCRIPTION
         );
         console.log("AetherCommunity deployed at:", address(communityContract));
 
-        // Grant governance permissions to community contract
-        governanceContract.grantRole(
-            governanceContract.ADMIN_ROLE(),
+        // Deploy a mock voting token for Governor
+        votingToken = new MockERC20Votes("Aether Voting Token", "AVT");
+        console.log("Voting Token deployed at:", address(votingToken));
+
+        // Deploy new Governor contract
+        governorContract = new Governor(
+            votingToken,
+            address(membershipPassContract),
+            VOTING_DELAY,
+            VOTING_PERIOD,
+            PROPOSAL_THRESHOLD,
+            deployer
+        );
+        console.log("Governor deployed at:", address(governorContract));
+
+        // Grant governance permissions to community contract (legacy)
+        legacyGovernanceContract.grantRole(
+            legacyGovernanceContract.ADMIN_ROLE(),
             address(communityContract)
         );
 
@@ -100,8 +123,10 @@ contract DeployAll is Script {
         console.log("Registry:", address(registryContract));
         console.log("MembershipPass:", address(membershipPassContract));
         console.log("AetherMembership:", address(membershipContract));
-        console.log("Governance:", address(governanceContract));
+        console.log("Legacy Governance:", address(legacyGovernanceContract));
         console.log("Community:", address(communityContract));
+        console.log("Voting Token:", address(votingToken));
+        console.log("Governor:", address(governorContract));
         console.log("Deployer:", deployer);
     }
 }

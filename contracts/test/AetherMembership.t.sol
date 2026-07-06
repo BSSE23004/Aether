@@ -19,6 +19,8 @@ contract AetherMembershipTest is Test {
     string constant NAME = "Aether Membership";
     string constant SYMBOL = "AETH";
 
+    receive() external payable {}
+
     function setUp() public {
         admin = address(this);
         minter = address(0x1);
@@ -43,7 +45,7 @@ contract AetherMembershipTest is Test {
     function test_MintMembership() public {
         vm.startPrank(user1);
         
-        uint256 tokenId = membership.mintMembership(user1, "ipfs://metadata");
+        uint256 tokenId = membership.mintMembership{value: MEMBERSHIP_PRICE}(user1, "ipfs://metadata");
         
         assertEq(membership.ownerOf(tokenId), user1);
         assertEq(membership.totalSupply(), 1);

@@ -24,6 +24,8 @@ contract MembershipPassTest is Test {
     string constant METADATA_URI = "ipfs://QmTest123";
     uint256 constant EXPIRY_TIME = 365 days;
 
+    receive() external payable {}
+
     function setUp() public {
         admin = address(this);
         minter = address(0x1);
@@ -151,6 +153,7 @@ contract MembershipPassTest is Test {
     }
 
     function test_MintMembership_InvalidExpiry() public {
+        vm.warp(1000); // Fast forward time so block.timestamp - 1 > 0
         vm.startPrank(user1);
 
         vm.expectRevert(MembershipPass.InvalidExpiry.selector);
@@ -170,7 +173,7 @@ contract MembershipPassTest is Test {
         vm.expectRevert(MembershipPass.MetadataTooLong.selector);
         membershipPass.mintMembership{value: MEMBERSHIP_PRICE}(
             user1,
-            "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",
+            "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur",
             EXPIRY_TIME
         );
 
@@ -324,7 +327,7 @@ contract MembershipPassTest is Test {
     function test_BurnMembership_InvalidTokenId() public {
         vm.startPrank(user1);
 
-        vm.expectRevert(MembershipPass.NotTokenOwner.selector);
+        vm.expectRevert(abi.encodeWithSignature("ERC721NonexistentToken(uint256)", 999));
         membershipPass.burnMembership(999);
 
         vm.stopPrank();
@@ -345,8 +348,12 @@ contract MembershipPassTest is Test {
 
         // Check storage is cleared
         assertEq(membershipPass.tokenOwner(tokenId), address(0));
-        assertEq(membershipPass.getTokenMintedAt(tokenId), 0);
-        assertEq(membershipPass.getTokenMetadata(tokenId), "");
+        
+        vm.expectRevert(MembershipPass.InvalidTokenId.selector);
+        membershipPass.getTokenMintedAt(tokenId);
+        
+        vm.expectRevert(MembershipPass.InvalidTokenId.selector);
+        membershipPass.getTokenMetadata(tokenId);
     }
 
     // ==================== Membership Check Tests ====================
@@ -473,11 +480,16 @@ contract MembershipPassTest is Test {
             METADATA_URI,
             EXPIRY_TIME
         );
+        membershipPass.mintMembership{value: MEMBERSHIP_PRICE}(
+            user1,
+            METADATA_URI,
+            EXPIRY_TIME
+        );
 
         vm.stopPrank();
 
         vm.expectRevert(MembershipPass.MaxSupplyReached.selector);
-        membershipPass.setMaxSupply(0); // Can't set below minted amount
+        membershipPass.setMaxSupply(1); // Can't set below minted amount (2)
     }
 
     function test_SetMaxSupply_Unlimited() public {
@@ -509,6 +521,7 @@ contract MembershipPassTest is Test {
     }
 
     function test_ExtendMembership_InvalidExpiry() public {
+        vm.warp(1000); // Fast forward time so block.timestamp - 1 > 0
         vm.startPrank(user1);
 
         membershipPass.mintMembership{value: MEMBERSHIP_PRICE}(
