@@ -33,7 +33,7 @@ export class MessagesService {
         }
       });
       return message;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to create message: ${error.message}`, error.stack);
       throw error;
     }

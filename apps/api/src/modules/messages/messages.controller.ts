@@ -8,7 +8,7 @@ export class MessagesController {
 
   @Post()
   create(@Body() dto: CreateMessageDto) {
-    return this.svc.create(dto);
+    return this.svc.create(dto as any);
   }
 
   @Get('channel/:id')

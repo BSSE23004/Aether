@@ -41,7 +41,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.user = { id: payload.sub, address: payload.address };
       
       this.logger.log(`Client connected: ${client.id} (User: ${client.data.user.id})`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Connection rejected: ${error.message}`);
       client.disconnect();
     }
@@ -82,7 +82,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(`channel_${data.channelId}`).emit('new_message', message);
       
       return { status: 'success', data: message };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Failed to send message', error);
       return { status: 'error', error: error.message };
     }
@@ -102,7 +102,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(`channel_${data.channelId}`).emit('message_edited', updatedMessage);
       
       return { status: 'success', data: updatedMessage };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Failed to edit message', error);
       return { status: 'error', error: error.message };
     }
@@ -121,7 +121,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
       
       return { status: 'success', data: { messageId: data.messageId } };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Failed to delete message', error);
       return { status: 'error', error: error.message };
     }

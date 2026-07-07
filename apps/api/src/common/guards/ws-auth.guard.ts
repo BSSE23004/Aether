@@ -1,4 +1,5 @@
-import { CanActivate, ExecutionContext, Injectable, Logger, WsException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
+import { WsException } from '@nestjs/websockets';
 import { PrismaService } from '../../database/prisma.service';
 import { Socket } from 'socket.io';
 
