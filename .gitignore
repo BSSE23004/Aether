@@ -95,3 +95,4 @@ pnpm-debug.log*
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+data/redis/
