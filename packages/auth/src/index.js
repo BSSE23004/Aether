@@ -1,8 +1,12 @@
+"use strict";
 // @aether/auth - Wallet authentication utilities
-import { recoverMessageAddress } from 'viem';
-export async function verifySignature(message, signature) {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.verifySignature = verifySignature;
+exports.createAuthChallenge = createAuthChallenge;
+const viem_1 = require("viem");
+async function verifySignature(message, signature) {
     try {
-        const recoveredAddress = await recoverMessageAddress({
+        const recoveredAddress = await (0, viem_1.recoverMessageAddress)({
             message,
             signature: signature,
         });
@@ -12,7 +16,7 @@ export async function verifySignature(message, signature) {
         return null;
     }
 }
-export function createAuthChallenge() {
+function createAuthChallenge() {
     return `Sign this message to authenticate: ${Date.now()}`;
 }
 //# sourceMappingURL=index.js.map
