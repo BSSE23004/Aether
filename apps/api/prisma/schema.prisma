@@ -285,12 +285,13 @@ model ContractEvent {
 }
 
 model ChainSyncState {
-  id           String   @id @default(cuid())
-  chain        String   @db.VarChar(64)
-  lastBlock    Int      @default(0)
+  id            String   @id @default(cuid())
+  chain         String   @db.VarChar(64)
+  lastBlock     Int      @default(0)
+  lastBlockHash String   @db.VarChar(66)
   lastTimestamp DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([chain])
 }
