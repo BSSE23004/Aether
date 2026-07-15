@@ -279,7 +279,7 @@ model ContractEvent {
   data        Json
   createdAt   DateTime  @default(now())
 
-  @@unique([txHash, logIndex])
+  @@unique([txHash, logIndex], name: "txHash_logIndex_unique")
   @@index([contract])
   @@index([blockNumber])
 }

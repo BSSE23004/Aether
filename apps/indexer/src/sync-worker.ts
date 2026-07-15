@@ -1,6 +1,5 @@
 /**
- * Main entry point for the blockchain indexer
- * Uses the sync worker for event synchronization
+ * Main entry point for the event sync worker
  */
 
 import { SyncWorker } from './sync/sync-worker.js';
@@ -37,7 +36,7 @@ async function main(): Promise<void> {
   const logger = LoggerService.getInstance();
 
   try {
-    logger.info('Starting Aether Blockchain Indexer with Sync Worker...');
+    logger.info('Starting Aether Event Sync Worker...');
 
     // Load and validate configuration
     const config = await getConfig();
@@ -70,6 +69,6 @@ async function main(): Promise<void> {
 
 // Run main function
 main().catch((error) => {
-  console.error('Failed to start indexer:', error);
+  console.error('Failed to start sync worker:', error);
   process.exit(1);
 });

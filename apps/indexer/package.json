@@ -6,8 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:sync": "tsx watch src/sync-worker.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:sync": "node dist/sync-worker.js",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "type-check": "tsc --noEmit",

@@ -140,4 +140,15 @@ export class LoggerService {
       lastBlockHash
     });
   }
+
+  /**
+   * Log reorg detected
+   */
+  logReorgDetected(newBlockHash: string, previousBlockHash: string, depth: number): void {
+    this.warn('Reorg detected', {
+      newBlockHash,
+      previousBlockHash,
+      depth
+    });
+  }
 }
