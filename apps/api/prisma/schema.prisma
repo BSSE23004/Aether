@@ -52,6 +52,14 @@ enum EventType {
   OTHER
 }
 
+enum FilePurpose {
+  AVATAR
+  COMMUNITY
+  ATTACHMENT
+  METADATA
+  OTHER
+}
+
 // -------------------- Models --------------------
 
 model User {
@@ -71,7 +79,8 @@ model User {
   memberships  CommunityMember[]
   channelRoles ChannelMember[]
   messages     Message[]
-  files        FileMetadata[]
+  files        File[]
+  fileMetadata FileMetadata[]
   notifications Notification[]
   proposals    DaoProposal[] @relation("ProposalCreator")
   votes        Vote[]
@@ -131,7 +140,8 @@ model Community {
   members      CommunityMember[]
   channels     Channel[]
   proposals    DaoProposal[]
-  files        FileMetadata[]
+  files        File[]
+  fileMetadata FileMetadata[]
 
   @@index([slug])
   @@index([deletedAt])
@@ -215,6 +225,30 @@ model FileMetadata {
 
   @@index([uploaderId])
   @@index([communityId])
+}
+
+model File {
+  id          String   @id @default(cuid())
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+  uploaderId  String
+  community   Community? @relation(fields: [communityId], references: [id])
+  communityId String?
+  filename    String   @db.VarChar(256)
+  mimeType    String   @db.VarChar(128)
+  size        Int
+  url         String   @db.VarChar(512)
+  cid         String   @db.VarChar(128)
+  purpose     String   @db.VarChar(50) @default("other")
+  description String?  @db.Text
+  metadata    Json?
+  pinned      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+
+  @@index([uploaderId])
+  @@index([communityId])
+  @@index([cid])
+  @@index([purpose])
 }
 
 model Notification {

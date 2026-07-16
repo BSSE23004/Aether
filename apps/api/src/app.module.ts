@@ -35,6 +35,7 @@ import { GovernanceModule } from './modules/governance/governance.module';
 import { BlockchainModule } from './modules/blockchain/blockchain.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { IndexerModule } from './modules/indexer/indexer.module';
+import { IPFSModule } from './modules/ipfs/ipfs.module';
 
 // Gateway modules
 import { GatewaysModule } from './gateways/gateways.module';
@@ -65,6 +66,7 @@ import { GatewaysModule } from './gateways/gateways.module';
     BlockchainModule,
     NotificationsModule,
     IndexerModule,
+    IPFSModule,
 
     // Gateways
     GatewaysModule,
