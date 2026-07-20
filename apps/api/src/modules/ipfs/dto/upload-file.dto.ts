@@ -3,7 +3,7 @@
  */
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum, IsBoolean, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean, MaxLength, IsObject } from 'class-validator';
 
 export enum FilePurpose {
   AVATAR = 'avatar',
@@ -44,6 +44,7 @@ export class UploadFileDto {
     description: 'Optional metadata to store with the file',
     type: 'object'
   })
+  @IsObject()
   @IsOptional()
   metadata?: Record<string, any>;
 }
@@ -53,6 +54,7 @@ export class UploadMetadataDto {
     description: 'Metadata object to upload to IPFS',
     type: 'object'
   })
+  @IsObject()
   metadata: Record<string, any>;
 
   @ApiPropertyOptional({
@@ -85,6 +87,7 @@ export class UploadDirectoryDto {
     description: 'Optional metadata to store with the directory',
     type: 'object'
   })
+  @IsObject()
   @IsOptional()
   metadata?: Record<string, any>;
 }
@@ -143,6 +146,7 @@ export class BatchUploadDto {
     description: 'Optional metadata for all files',
     type: 'object'
   })
+  @IsObject()
   @IsOptional()
   metadata?: Record<string, any>;
 }

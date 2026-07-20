@@ -175,6 +175,7 @@ model Channel {
 
   members      ChannelMember[]
   messages     Message[]
+  files        File[]
 
   @@index([communityId])
 }
@@ -207,6 +208,8 @@ model Message {
 
   @@index([channelId, createdAt])
   @@index([authorId])
+
+  files        File[]
 }
 
 model FileMetadata {
@@ -233,6 +236,10 @@ model File {
   uploaderId  String
   community   Community? @relation(fields: [communityId], references: [id])
   communityId String?
+  channel     Channel? @relation(fields: [channelId], references: [id])
+  channelId   String?
+  message     Message? @relation(fields: [messageId], references: [id])
+  messageId   String?
   filename    String   @db.VarChar(256)
   mimeType    String   @db.VarChar(128)
   size        Int
@@ -247,6 +254,8 @@ model File {
 
   @@index([uploaderId])
   @@index([communityId])
+  @@index([channelId])
+  @@index([messageId])
   @@index([cid])
   @@index([purpose])
 }

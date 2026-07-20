@@ -38,6 +38,8 @@ export const envSchema = {
   PINATA_API_KEY: { type: 'string', default: '' },
   PINATA_API_SECRET: { type: 'string', default: '' },
   IPFS_GATEWAY: { type: 'string', default: 'https://gateway.pinata.cloud' },
+  IPFS_API_URL: { type: 'string', default: 'http://localhost:5001' },
+  IPFS_GATEWAY_URL: { type: 'string', default: 'https://ipfs.io/ipfs/' },
 
   // AI Service (optional)
   AI_SERVICE_URL: { type: 'string', default: 'http://localhost:8000' },
