@@ -4,9 +4,22 @@
  */
 
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService } from '../../../database/prisma.service';
 import { IPFSService } from './ipfs.service';
 import { FilePurpose } from '../dto/upload-file.dto';
+
+// Type definition for multer file
+interface ExpressFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
+
+// Type alias for Express.Multer.File
+type MulterFile = ExpressFile & Express.Multer.File;
 
 export interface CreateAttachmentDto {
   messageId?: string;
@@ -44,7 +57,7 @@ export class AttachmentService {
    */
   async createMessageAttachment(
     messageId: string,
-    file: Express.Multer.File,
+    file: MulterFile,
     userId: string
   ): Promise<AttachmentResult> {
     try {
@@ -119,7 +132,7 @@ export class AttachmentService {
    */
   async createChannelAttachment(
     channelId: string,
-    file: Express.Multer.File,
+    file: MulterFile,
     userId: string
   ): Promise<AttachmentResult> {
     try {
@@ -189,7 +202,7 @@ export class AttachmentService {
    */
   async createCommunityAttachment(
     communityId: string,
-    file: Express.Multer.File,
+    file: MulterFile,
     userId: string
   ): Promise<AttachmentResult> {
     try {
@@ -288,7 +301,7 @@ export class AttachmentService {
         orderBy: { createdAt: 'desc' }
       });
 
-      return attachments.map(attachment => ({
+      return attachments.map((attachment: any) => ({
         id: attachment.id,
         cid: attachment.cid,
         url: attachment.url,
@@ -338,7 +351,7 @@ export class AttachmentService {
         orderBy: { createdAt: 'desc' }
       });
 
-      return attachments.map(attachment => ({
+      return attachments.map((attachment: any) => ({
         id: attachment.id,
         cid: attachment.cid,
         url: attachment.url,

@@ -15,13 +15,24 @@ import {
   BadRequestException
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ResponseInterceptor } from '../../common/interceptors/response.interceptor';
 import { AttachmentService, AttachmentResult } from './services/attachment.service';
 
-@ApiTags('Attachments')
+// Type definition for multer file
+interface ExpressFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
+
+// Type alias for Express.Multer.File
+type MulterFile = ExpressFile & Express.Multer.File;
+
 @Controller('attachments')
 @UseGuards(AuthGuard)
 @UseInterceptors(ResponseInterceptor)
@@ -33,12 +44,9 @@ export class AttachmentController {
    */
   @Post('message/:messageId')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload attachment for message' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, type: AttachmentResult })
   async uploadMessageAttachment(
     @Param('messageId') messageId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
     @CurrentUser('id') userId: string
   ): Promise<AttachmentResult> {
     if (!file) {
@@ -53,12 +61,9 @@ export class AttachmentController {
    */
   @Post('channel/:channelId')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload attachment for channel' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, type: AttachmentResult })
   async uploadChannelAttachment(
     @Param('channelId') channelId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
     @CurrentUser('id') userId: string
   ): Promise<AttachmentResult> {
     if (!file) {
@@ -73,12 +78,9 @@ export class AttachmentController {
    */
   @Post('community/:communityId')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload attachment for community' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, type: AttachmentResult })
   async uploadCommunityAttachment(
     @Param('communityId') communityId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
     @CurrentUser('id') userId: string
   ): Promise<AttachmentResult> {
     if (!file) {
@@ -92,8 +94,6 @@ export class AttachmentController {
    * Get attachments for message
    */
   @Get('message/:messageId')
-  @ApiOperation({ summary: 'Get attachments for message' })
-  @ApiResponse({ status: 200, type: [AttachmentResult] })
   async getMessageAttachments(
     @Param('messageId') messageId: string,
     @CurrentUser('id') userId: string

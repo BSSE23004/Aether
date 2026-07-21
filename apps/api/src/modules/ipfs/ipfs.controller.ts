@@ -20,7 +20,6 @@ import {
   ParseIntPipe
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -43,7 +42,6 @@ import {
   BatchUploadResponseDto
 } from './dto/ipfs-response.dto';
 
-@ApiTags('IPFS')
 @Controller('ipfs')
 @UseGuards(AuthGuard)
 @UseInterceptors(ResponseInterceptor)
@@ -55,9 +53,6 @@ export class IPFSController {
    */
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload single file to IPFS' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, type: IPFSUploadResponseDto })
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser('id') userId: string,
@@ -74,8 +69,6 @@ export class IPFSController {
    * Upload metadata to IPFS
    */
   @Post('upload/metadata')
-  @ApiOperation({ summary: 'Upload metadata to IPFS' })
-  @ApiResponse({ status: 201, type: IPFSMetadataResponseDto })
   async uploadMetadata(
     @Body() dto: UploadMetadataDto,
     @CurrentUser('id') userId: string
@@ -99,9 +92,6 @@ export class IPFSController {
    */
   @Post('upload/directory')
   @UseInterceptors(FilesInterceptor('files', 10))
-  @ApiOperation({ summary: 'Upload directory to IPFS' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, type: IPFSUploadResponseDto })
   async uploadDirectory(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: UploadDirectoryDto,
@@ -124,9 +114,6 @@ export class IPFSController {
    */
   @Post('upload/batch')
   @UseInterceptors(FilesInterceptor('files', 20))
-  @ApiOperation({ summary: 'Batch upload files to IPFS' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, type: BatchUploadResponseDto })
   async batchUpload(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser('id') userId: string,
@@ -143,7 +130,6 @@ export class IPFSController {
    * Get file by ID
    */
   @Get('file/:id')
-  @ApiOperation({ summary: 'Get file by ID' })
   async getFile(
     @Param('id') id: string,
     @CurrentUser('id') userId: string
@@ -155,7 +141,6 @@ export class IPFSController {
    * Get file by CID
    */
   @Get('cid/:cid')
-  @ApiOperation({ summary: 'Get file by CID' })
   async getFileByCID(
     @Param('cid') cid: string,
     @CurrentUser('id') userId: string
@@ -168,8 +153,6 @@ export class IPFSController {
    */
   @Get('info/:cid')
   @Public()
-  @ApiOperation({ summary: 'Get CID information' })
-  @ApiResponse({ status: 200, type: IPFSCIDInfoDto })
   async getCIDInfo(@Param('cid') cid: string): Promise<IPFSCIDInfoDto> {
     return await this.ipfsService.getCIDInfo(cid);
   }
@@ -178,7 +161,6 @@ export class IPFSController {
    * Pin CID
    */
   @Post('pin')
-  @ApiOperation({ summary: 'Pin CID to IPFS' })
   async pinCID(
     @Body() dto: PinCIDDto,
     @CurrentUser('id') userId: string
@@ -191,7 +173,6 @@ export class IPFSController {
    * Unpin CID
    */
   @Delete('pin')
-  @ApiOperation({ summary: 'Unpin CID from IPFS' })
   async unpinCID(
     @Body() dto: UnpinCIDDto,
     @CurrentUser('id') userId: string
@@ -204,7 +185,6 @@ export class IPFSController {
    * Delete file
    */
   @Delete('file/:id')
-  @ApiOperation({ summary: 'Delete file' })
   async deleteFile(
     @Param('id') id: string,
     @CurrentUser('id') userId: string
@@ -217,7 +197,6 @@ export class IPFSController {
    * Get user's files
    */
   @Get('files')
-  @ApiOperation({ summary: 'Get user files' })
   async getUserFiles(
     @CurrentUser('id') userId: string,
     @Query('purpose') purpose?: FilePurpose,
@@ -231,7 +210,6 @@ export class IPFSController {
    * Link file to community
    */
   @Put('file/:id/community/:communityId')
-  @ApiOperation({ summary: 'Link file to community' })
   async linkFileToCommunity(
     @Param('id') id: string,
     @Param('communityId') communityId: string,
@@ -246,8 +224,6 @@ export class IPFSController {
    */
   @Get('health')
   @Public()
-  @ApiOperation({ summary: 'IPFS health check' })
-  @ApiResponse({ status: 200, type: IPFSHealthResponseDto })
   async healthCheck(): Promise<IPFSHealthResponseDto> {
     const health = await this.ipfsService.healthCheck();
     
