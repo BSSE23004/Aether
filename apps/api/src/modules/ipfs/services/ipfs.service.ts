@@ -430,6 +430,7 @@ export class IPFSService {
    */
   private mapToUploadResponse(uploadResult: IPFSUploadResult, fileId: string): IPFSUploadResponseDto {
     return {
+      id: fileId,
       cid: uploadResult.cid,
       size: uploadResult.size,
       name: uploadResult.name,

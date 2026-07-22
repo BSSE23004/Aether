@@ -8,6 +8,7 @@ import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import type { Message } from '@/types';
 import { formatMessageTime, isOwnMessage } from '../../utils';
+import { AttachmentDisplay } from '@/features/storage';
 
 interface MessageBubbleProps {
   message: Message;
@@ -70,7 +71,15 @@ export const MessageBubble = memo<MessageBubbleProps>(({
             isOptimistic && 'opacity-60'
           )}
         >
-          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+          {message.content && (
+            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+          )}
+          {message.files && message.files.length > 0 && (
+            <AttachmentDisplay
+              files={message.files}
+              className={cn(isOwn ? 'text-left' : 'text-left')}
+            />
+          )}
         </div>
 
         {/* Time for own messages */}

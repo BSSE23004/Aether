@@ -27,9 +27,11 @@ export const TypingIndicator = memo<TypingIndicatorProps>(({ typingUsers, curren
     const count = visibleTypingUsers.length;
     if (count === 1) {
       const user = visibleTypingUsers[0];
-      return `${user.username || 'Someone'} is typing...`;
+      return `${user?.username || 'Someone'} is typing...`;
     } else if (count === 2) {
-      return `${visibleTypingUsers[0].username || 'Someone'} and ${visibleTypingUsers[1].username || 'someone'} are typing...`;
+      const user1 = visibleTypingUsers[0];
+      const user2 = visibleTypingUsers[1];
+      return `${user1?.username || 'Someone'} and ${user2?.username || 'someone'} are typing...`;
     } else {
       return `${count} people are typing...`;
     }

@@ -15,7 +15,8 @@ import { useOptimisticMessage } from '../hooks/useOptimisticMessage';
 import { useMessages } from '../hooks/useMessages';
 import { MessageList } from './message-list/message-list';
 import { MessageInput } from './message-input/message-input';
-import type { Message, MessageReaction } from '@/types';
+import type { Message } from '@/types';
+import type { MessageReaction } from '../types';
 
 interface ChatContainerProps {
   channelId: string;
@@ -34,12 +35,12 @@ export function ChatContainer({ channelId, communityId, className }: ChatContain
   const { reactions, addReaction, removeReaction, getMessageReactions } = useReactions();
   const { addOptimisticMessage, confirmOptimisticMessage, removeOptimisticMessage } = useOptimisticMessage(channelId);
 
-  const messages = messagesData?.data || [];
+  const messages = messagesData?.items || [];
 
   // Socket connection
   const { sendMessage: socketSendMessage, setTyping: socketSetTyping, markAsRead } = useChatSocket({
     channelId,
-    token: accessToken,
+    token: accessToken || undefined,
     onMessageReceived: (message: Message) => {
       // Handle optimistic message confirmation
       queryClient.setQueryData(['messages', channelId], (old: any) => {
@@ -61,7 +62,7 @@ export function ChatContainer({ channelId, communityId, className }: ChatContain
   }, []);
 
   // Handle sending messages
-  const handleSendMessage = useCallback(async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string, metadata?: any) => {
     if (!user) return;
 
     // Add optimistic message
@@ -69,7 +70,7 @@ export function ChatContainer({ channelId, communityId, className }: ChatContain
 
     try {
       // Send via socket
-      const success = socketSendMessage(content, { channelId });
+      const success = socketSendMessage(content, metadata);
       
       if (!success) {
         // Fallback to HTTP API if socket fails
@@ -80,7 +81,7 @@ export function ChatContainer({ channelId, communityId, className }: ChatContain
       console.error('Failed to send message:', error);
       removeOptimisticMessage(tempId);
     }
-  }, [user, channelId, addOptimisticMessage, socketSendMessage, removeOptimisticMessage]);
+  }, [user, addOptimisticMessage, socketSendMessage, removeOptimisticMessage]);
 
   // Handle typing
   const handleTypingStart = useCallback(() => {

@@ -10,6 +10,7 @@ export class MessagesService {
 
   async create(dto: CreateMessageDto & { authorId: string }) {
     try {
+      const fileIds = dto.metadata?.fileIds || [];
       const message = await this.prisma.message.create({
         data: {
           content: dto.content,
@@ -17,6 +18,9 @@ export class MessagesService {
           authorId: dto.authorId,
           // Optional metadata support (e.g. attachments, mentions)
           metadata: dto.metadata ? dto.metadata : undefined,
+          files: fileIds.length > 0 ? {
+            connect: fileIds.map((id: string) => ({ id }))
+          } : undefined,
         },
         include: {
           author: {
@@ -29,7 +33,8 @@ export class MessagesService {
                 select: { address: true }
               }
             }
-          }
+          },
+          files: true,
         }
       });
       return message;
@@ -56,7 +61,8 @@ export class MessagesService {
               select: { address: true }
             }
           }
-        }
+        },
+        files: true,
       }
     });
   }
@@ -70,11 +76,16 @@ export class MessagesService {
       throw new Error('Unauthorized to edit this message');
     }
 
+    const fileIds = metadata?.fileIds || [];
+
     return this.prisma.message.update({
       where: { id: messageId },
       data: {
         content,
         metadata: metadata ? metadata : undefined,
+        files: fileIds.length > 0 ? {
+          set: fileIds.map((id: string) => ({ id }))
+        } : undefined,
       },
       include: {
         author: {
@@ -87,7 +98,8 @@ export class MessagesService {
               select: { address: true }
             }
           }
-        }
+        },
+        files: true,
       }
     });
   }

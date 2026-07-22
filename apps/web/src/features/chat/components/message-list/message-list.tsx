@@ -6,7 +6,8 @@
 
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { Message, MessageReaction } from '@/types';
+import type { Message } from '@/types';
+import type { MessageReaction } from '../../types';
 import { MessageItem } from './message-item';
 import { TypingIndicator } from './typing-indicator';
 import { groupMessages } from '../../utils';

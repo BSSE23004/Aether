@@ -6,7 +6,8 @@
 
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
-import type { Message, MessageReaction } from '@/types';
+import type { Message } from '@/types';
+import type { MessageReaction } from '../../types';
 import { MessageBubble } from './message-bubble';
 import { MessageHeader } from './message-header';
 import { MessageReactions } from './message-reactions';

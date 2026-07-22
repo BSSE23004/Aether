@@ -16,7 +16,7 @@ export default function CommunityDetailPage() {
   const { data: channels, isLoading } = useCommunityChannels(communityId);
 
   useEffect(() => {
-    if (!isLoading && channels && channels.length > 0) {
+    if (!isLoading && channels && channels.length > 0 && channels[0]) {
       // Redirect to the first channel
       router.replace(`/communities/${communityId}/channels/${channels[0].id}`);
     }

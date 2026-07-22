@@ -33,6 +33,7 @@ export interface Message {
   createdAt: string;
   updatedAt?: string;
   reactions?: Record<string, number>;
+  files?: StorageFile[];
 }
 
 export interface Proposal {
@@ -52,12 +53,17 @@ export interface Proposal {
 export interface StorageFile {
   id: string;
   name: string;
+  filename?: string;
   mimeType: string;
   size: number;
-  ipfsHash: string;
+  ipfsHash?: string;
+  cid?: string;
   url: string;
-  uploadedBy: string;
+  uploadedBy?: string;
+  uploaderId?: string;
   communityId?: string;
+  channelId?: string;
+  messageId?: string;
   createdAt: string;
 }
 

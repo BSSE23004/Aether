@@ -6,6 +6,12 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class IPFSUploadResponseDto {
   @ApiProperty({
+    description: 'Database ID of the file record',
+    example: 'clxxxxxxxxxxxxxxx'
+  })
+  id: string;
+
+  @ApiProperty({
     description: 'IPFS CID of the uploaded file',
     example: 'QmXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxX'
   })
