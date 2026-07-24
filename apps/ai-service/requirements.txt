@@ -23,6 +23,10 @@ psycopg2-binary==2.9.9
 redis==5.0.1
 aioredis==2.0.1
 
+# Machine Learning
+numpy==1.26.3
+scikit-learn==1.4.0
+
 # Monitoring & Logging
 python-logging-loki==0.3.2
 

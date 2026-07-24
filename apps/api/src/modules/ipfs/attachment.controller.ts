@@ -105,8 +105,6 @@ export class AttachmentController {
    * Get attachments for channel
    */
   @Get('channel/:channelId')
-  @ApiOperation({ summary: 'Get attachments for channel' })
-  @ApiResponse({ status: 200, type: [AttachmentResult] })
   async getChannelAttachments(
     @Param('channelId') channelId: string,
     @CurrentUser('id') userId: string
@@ -118,8 +116,6 @@ export class AttachmentController {
    * Get attachment by ID
    */
   @Get(':id')
-  @ApiOperation({ summary: 'Get attachment by ID' })
-  @ApiResponse({ status: 200, type: AttachmentResult })
   async getAttachment(
     @Param('id') id: string,
     @CurrentUser('id') userId: string
@@ -131,7 +127,6 @@ export class AttachmentController {
    * Delete attachment
    */
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete attachment' })
   async deleteAttachment(
     @Param('id') id: string,
     @CurrentUser('id') userId: string
